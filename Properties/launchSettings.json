@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Android": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "targetFramework": "net9.0-android"
+    }
+  }
+}

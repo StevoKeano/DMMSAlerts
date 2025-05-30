@@ -1,0 +1,3 @@
+<PropertyGroup>
+	<AndroidUseManagedCodeShrinker>false</AndroidUseManagedCodeShrinker>
+</PropertyGroup>

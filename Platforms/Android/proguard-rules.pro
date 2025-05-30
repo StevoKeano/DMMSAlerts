@@ -1,0 +1,2 @@
+-keep class AviationApp.** { *; }
+-keep class CsvHelper.** { *; }
