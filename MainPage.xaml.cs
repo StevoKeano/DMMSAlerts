@@ -76,7 +76,31 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private bool disableAlerts; // Add field for alert suppression
     private string lastStationID = "N/A";
 
+    private float ttsAlertVolume;
+    private CancellationTokenSource ttsTestCts;
+    private Task ttsTestTask;
+    private readonly object TtsTestLock = new object();
+    private DateTime lastVolumeChange = DateTime.MinValue;
+    private readonly TimeSpan ttsTestDuration = TimeSpan.FromSeconds(5);
 
+    public float TTSAlertVolume
+    {
+        get => ttsAlertVolume;
+        set
+        {
+            // Round to nearest 0.1 before setting
+            float roundedValue = (float)Math.Round(value / 0.1f) * 0.1f;
+            roundedValue = Math.Max(0.5f, Math.Min(1.0f, roundedValue));
+            if (Math.Abs(ttsAlertVolume - roundedValue) > 0.01f)
+            {
+                ttsAlertVolume = roundedValue;
+                OnPropertyChanged();
+                Preferences.Set("TTSAlertVolume", ttsAlertVolume);
+                Log.Debug("MainPage", $"Saved TTSAlertVolume to Preferences: {ttsAlertVolume}");
+                TriggerTTSVolumeTest();
+            }
+        }
+    }
     public string LatitudeText
     {
         get => latitudeText;
@@ -227,6 +251,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         Log.Debug("MainPage", $"Loaded settings at startup - AirportCallOuts:{airportCallOuts}, DmmsText: {dmmsText}, WarningLabelText: {warningLabelText}, TtsAlertText: {ttsAlertText}, MessageFrequency: {messageFrequency}, ShowSkull: {showSkull}, AutoActivateMonitoring: {autoActivateMonitoring}, ShowSkullWarning: {showSkullWarning}, SuppressWarnings: {suppressWarningsUntilAboveDmms}");
         System.Diagnostics.Debug.WriteLine($"ShowSkullWarning initial value: {ShowSkullWarning}");
         BindingContext = this;
+        ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f); // Default to full volume
 
         InitializeComponent();
         _platformService = platformService;
@@ -260,7 +285,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         OnPropertyChanged(nameof(ShowSkullWarning));
         OnPropertyChanged(nameof(ClosestAirportText));
         OnPropertyChanged(nameof(AirportCallOuts));
-        //OnPropertyChanged(nameof(ClosestAirportElev));
+
 
         // Load airports from CSV // Test TTS on startup
         Task.Run(async () => await LoadAirportsAsync());
@@ -268,7 +293,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         {
             try
             {
-                await TextToSpeech.Default.SpeakAsync("TTS Volumn Testing 1, 2, 3", new SpeechOptions { Volume = 1.0f }, CancellationToken.None);
+                await TextToSpeech.Default.SpeakAsync("TTS Volumn Testing 1, 2, 3", new SpeechOptions { Volume = TTSAlertVolume }, CancellationToken.None);
                 Log.Debug("MainPage", "Startup TTS test played successfully");
             }
             catch (Exception ex)
@@ -335,7 +360,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                             lastStationID = closestAirport.StationId;
                             await TextToSpeech.Default.SpeakAsync(
                                 ClosestAirportText.Replace("Closest Airport:", ""),
-                                new SpeechOptions { Volume = 0.5f });                        
+                                new SpeechOptions { Volume = TTSAlertVolume});                        
                     }
                 }
 
@@ -401,6 +426,77 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         }); 
     }
 
+    private async void TriggerTTSVolumeTest()
+    {
+        lock (TtsTestLock)
+        {
+            // Cancel and dispose previous token safely
+            if (ttsTestCts != null)
+            {
+                try
+                {
+                    ttsTestCts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    Log.Debug("MainPage", "TTS test CancellationTokenSource already disposed");
+                }
+                finally
+                {
+                    ttsTestCts.Dispose();
+                    ttsTestCts = null;
+                }
+            }
+            ttsTestCts = new CancellationTokenSource();
+        }
+
+        var token = ttsTestCts.Token;
+        lastVolumeChange = DateTime.Now;
+        ttsTestTask = Task.Run(async () =>
+        {
+            try
+            {
+                while ((DateTime.Now - lastVolumeChange) < ttsTestDuration && !token.IsCancellationRequested)
+                {
+                    await TextToSpeech.Default.SpeakAsync(
+                        "TTS testing Alert Volume. Loud enough to get your attention?",
+                        new SpeechOptions { Volume = ttsAlertVolume },
+                        token);
+                    await Task.Delay(1500, token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Log.Debug("MainPage", "TTS volume test task cancelled");
+            }
+            catch (ObjectDisposedException)
+            {
+                Log.Debug("MainPage", "TTS volume test task encountered disposed object");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("MainPage", $"TTS volume test error: {ex.Message}\n{ex.StackTrace}");
+            }
+            finally
+            {
+                lock (TtsTestLock)
+                {
+                    if (ttsTestCts != null)
+                    {
+                        ttsTestCts.Dispose();
+                        ttsTestCts = null;
+                    }
+                    ttsTestTask = null;
+                }
+            }
+        }, token);
+    }
+
+    private void OnTTSVolumeChanged(object sender, ValueChangedEventArgs e)
+    {
+        // Set rounded value directly through property to trigger TTS test
+        TTSAlertVolume = (float)e.NewValue;
+    }
     private bool IsAccelerationPlateau()
     {
         if (airspeedHistory.Count < 2)
@@ -723,6 +819,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             ttsCts = new CancellationTokenSource();
             System.Diagnostics.Debug.WriteLine($"MainPage: Created flashingCts={flashingCts.GetHashCode()}, ttsCts={ttsCts.GetHashCode()}");
             IsFlashing = true;
+            BringAppToForeground();
         }
 
 #if ANDROID
@@ -786,7 +883,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             {
                 await TextToSpeech.Default.SpeakAsync(
                     ttsAlertText,
-                    new SpeechOptions { Volume = 1.0f },
+                    new SpeechOptions { Volume = TTSAlertVolume},
                     ttsToken);
                 System.Diagnostics.Debug.WriteLine("MainPage: TTS: Initial message played at maximum volume");
                 while (!ttsToken.IsCancellationRequested)
@@ -797,7 +894,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                         System.Diagnostics.Debug.WriteLine($"MainPage: Attempting to play TTS: {ttsAlertText}");
                         await TextToSpeech.Default.SpeakAsync(
                             ttsAlertText,
-                            new SpeechOptions { Volume = 1.0f },
+                            new SpeechOptions { Volume = TTSAlertVolume },
                             ttsToken);
                         System.Diagnostics.Debug.WriteLine("MainPage: TTS: Played message at maximum volume");
                     }
@@ -939,6 +1036,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f);
+
         // Reload settings live
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
@@ -947,6 +1046,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         autoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true);
         airportCallOuts = Preferences.Get("AirportCallOuts", false); // Add this
         ShowSkullWarning = IsFlashing && showSkull;
+        OnPropertyChanged(nameof(TTSAlertVolume));
         OnPropertyChanged(nameof(WarningLabelText));
         OnPropertyChanged(nameof(ShowSkullWarning));
         OnPropertyChanged(nameof(AirportCallOuts));

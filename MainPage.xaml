@@ -139,6 +139,26 @@
                        HorizontalTextAlignment="Center"
                        SemanticProperties.HeadingLevel="Level2"
                        SemanticProperties.Description="DMMS (KNOTS)" />
+                <Slider x:Name="TTSVolumeSlider"
+                        Minimum="0.5"
+                        Maximum="1.0"
+                        Value="{Binding TTSAlertVolume}"
+                        WidthRequest="150"
+                        ThumbColor="{StaticResource White}"
+                        BackgroundColor="{StaticResource Gray100}"
+                        ValueChanged="OnTTSVolumeChanged" />
+                <HorizontalStackLayout Margin="0,10,0,0" HorizontalOptions="Center">
+                    <Label Text="Alert Volume"
+                       FontFamily="OpenSansRegular"
+                       FontSize="18"
+                       TextColor="{StaticResource Gray100}"
+                       VerticalOptions="Center" />
+                    <Label Text="{Binding TTSAlertVolume, StringFormat='{0:F1}'}"
+                       FontFamily="OpenSansRegular"
+                       FontSize="18"
+                       TextColor="{StaticResource Gray100}"
+                       VerticalOptions="Center" />
+                </HorizontalStackLayout>
 
                 <!-- 3D Button -->
                 <Border x:Name="CounterBtnBorder"

@@ -102,7 +102,7 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
         AutoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true); // Match MainPage default
         WarningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         TtsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
-        AirportCallOuts = Preferences.Get("AirportCallOuts", false);
+        AirportCallOuts = Preferences.Get("AirportCallOuts", true);
         // Log for debugging
         System.Diagnostics.Debug.WriteLine($"OptionsPage: Loaded settings -  AirportCallOuts: {AirportCallOuts}, MessageFrequency: {MessageFrequency}, ShowSkull: {ShowSkull}, AutoActivateMonitoring: {AutoActivateMonitoring}, WarningLabelText: {WarningLabelText}, TtsAlertText: {TtsAlertText}");
     }
