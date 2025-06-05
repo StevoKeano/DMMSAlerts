@@ -82,6 +82,18 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>	
 	<ItemGroup>
+	  <AndroidResource Remove="Platforms\Android\Resources\NewFolder1\**" />
+	  <Compile Remove="Platforms\Android\Resources\NewFolder1\**" />
+	  <EmbeddedResource Remove="Platforms\Android\Resources\NewFolder1\**" />
+	  <MauiCss Remove="Platforms\Android\Resources\NewFolder1\**" />
+	  <MauiXaml Remove="Platforms\Android\Resources\NewFolder1\**" />
+	  <None Remove="Platforms\Android\Resources\NewFolder1\**" />
+	</ItemGroup>	
+	<ItemGroup>
+	  <AndroidResource Remove="Platforms\Android\Resources\raw\stallhorn.m4a" />
+	</ItemGroup>	
+	<ItemGroup>
+	  <None Remove="Platforms\Android\Resources\raw\stallhorn.m4a" />
 	  <None Remove="Resources\drawable\skull_crossbones_notification.png" />
 	</ItemGroup>	
 	<!--<ItemGroup>
@@ -112,5 +124,8 @@
     <Generator>MSBuild:Compile</Generator>
   </MauiXaml>
 	<Reference Include="Mono.Android" />	
+</ItemGroup>
+<ItemGroup>
+  <Folder Include="Platforms\Android\Resources\NewFolder\" />
 </ItemGroup>
 </Project>

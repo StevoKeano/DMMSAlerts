@@ -447,8 +447,9 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 };
                 channel.EnableVibration(true);
                 channel.EnableLights(true);
-                // Set default notification sound
-                channel.SetSound(Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification), null);
+                // Set custom stall warning sound
+                var soundUri = Android.Net.Uri.Parse($"android.resource://{context.PackageName}/{Resource.Raw.stallwarning}");
+                channel.SetSound(soundUri, null);
                 notificationManager.CreateNotificationChannel(channel);
             }
 
@@ -480,7 +481,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
                 // Show the notification
                 notificationManager.Notify(notificationId, builder.Build());
-                Log.Debug("MainPage", "Skull and Crossbones notification shown");
+                Log.Debug("MainPage", "Skull and Crossbones notification shown with stall warning sound");
             }
             else
             {
