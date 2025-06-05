@@ -426,6 +426,76 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         }); 
     }
 
+    private void ShowSkullNotification(bool isActive)
+    {
+#if ANDROID
+        try
+        {
+            var context = Android.App.Application.Context;
+            var notificationManager = (Android.App.NotificationManager)context.GetSystemService(Context.NotificationService);
+            const int notificationId = 1001; // Unique ID for this notification
+            string channelId = "aviation_alert_channel";
+            string channelName = "Aviation Alerts";
+
+            // Create notification channel for Android 8.0+ (API 26+)
+            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
+            {
+                var channel = new Android.App.NotificationChannel(channelId, channelName, Android.App.NotificationImportance.High)
+                {
+                    Description = "Alerts for DMMS monitoring",
+                    LockscreenVisibility = Android.App.NotificationVisibility.Public
+                };
+                channel.EnableVibration(true);
+                channel.EnableLights(true);
+                // Set default notification sound
+                channel.SetSound(Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification), null);
+                notificationManager.CreateNotificationChannel(channel);
+            }
+
+            if (isActive)
+            {
+                var builder = new Android.App.Notification.Builder(context, channelId)
+                    .SetContentTitle("DMMS Alert")
+                    .SetContentText(ttsAlertText)
+                    .SetSmallIcon(Resource.Drawable.skull_crossbones_notification) // Assumes icon is correctly set up
+                    .SetPriority((int)Android.App.NotificationPriority.High)
+                    .SetAutoCancel(false)
+                    .SetOngoing(true)
+                    .SetVibrate(new long[] { 0, 500, 250, 500 }); // Vibration pattern
+
+                // Set sound explicitly for pre-Android 8.0 or as fallback
+                if (Android.OS.Build.VERSION.SdkInt < Android.OS.BuildVersionCodes.O)
+                {
+                    builder.SetSound(Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Notification));
+                }
+
+                // Intent to open the app when the notification is clicked
+                var intent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
+                if (intent != null)
+                {
+                    intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.ClearTop);
+                    var pendingIntent = PendingIntent.GetActivity(context, 0, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+                    builder.SetContentIntent(pendingIntent);
+                }
+
+                // Show the notification
+                notificationManager.Notify(notificationId, builder.Build());
+                Log.Debug("MainPage", "Skull and Crossbones notification shown");
+            }
+            else
+            {
+                // Cancel the notification
+                notificationManager.Cancel(notificationId);
+                Log.Debug("MainPage", "Skull and Crossbones notification cancelled");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("MainPage", $"Failed to manage notification: {ex.Message}\n{ex.StackTrace}");
+            Debug.WriteLine($"MainPage: Failed to manage notification: {ex.Message}");
+        }
+#endif
+    }
     private async void TriggerTTSVolumeTest()
     {
         lock (TtsTestLock)
@@ -802,6 +872,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             IsFlashing = false;
             PageBackground = Colors.Transparent;
         });
+        ShowSkullNotification(false); // Cancel notification
         Log.Debug("MainPage", "Flashing and TTS stopped");
     }
     private async Task StartFlashingBackground()
@@ -819,7 +890,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             ttsCts = new CancellationTokenSource();
             System.Diagnostics.Debug.WriteLine($"MainPage: Created flashingCts={flashingCts.GetHashCode()}, ttsCts={ttsCts.GetHashCode()}");
             IsFlashing = true;
-            BringAppToForeground();
+            //BringAppToForeground();
+            ShowSkullNotification(true); // Show notification
         }
 
 #if ANDROID
@@ -969,6 +1041,24 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             {
                 WarningLabelText = "< DMMS Alerter <";
             }
+            // Check notification permission for Android 13+
+            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Tiramisu)
+            {
+                var status = await Permissions.CheckStatusAsync<Permissions.PostNotifications>();
+                if (status != PermissionStatus.Granted)
+                {
+                    status = await Permissions.RequestAsync<Permissions.PostNotifications>();
+                    if (status != PermissionStatus.Granted)
+                    {
+                        Debug.WriteLine("MainPage: Notification permission denied");
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            WarningLabelText = "Please allow notifications in settings.";
+                        });
+                        return;
+                    }
+                }
+            }
             var context = Android.App.Application.Context;
             var startServiceIntent = new Intent(context, typeof(AviationApp.Services.LocationService));
             context.StartForegroundService(startServiceIntent);
@@ -988,31 +1078,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             });
         }
     }
-    //private async Task StartLocationService()
-    //{
-    //    Debug.WriteLine("MainPage: StartLocationService started");
-    //    try
-    //    {
-    //        var status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-    //        Debug.WriteLine($"MainPage: Permission status: {status}");
-    //        if (status != PermissionStatus.Granted)
-    //        {
-    //            Debug.WriteLine("MainPage: Permission Denied - Location permission is required for tracking.");
-    //            Log.Debug("MainPage", "Permission Denied - Location permission is required for tracking.");
-    //            return;
-    //        }
-
-    //        var context = Android.App.Application.Context;
-    //        var startServiceIntent = new Intent(context, typeof(AviationApp.Services.LocationService));
-    //        context.StartForegroundService(startServiceIntent);
-    //        Debug.WriteLine("MainPage: StartForegroundService called");
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debug.WriteLine($"MainPage: Failed to start service: {ex.Message}");
-    //        Log.Debug("MainPage", $"Failed to start service: {ex.Message}");
-    //    }
-    //}
 
     private int StopLocationService()
     {

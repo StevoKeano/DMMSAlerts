@@ -81,6 +81,9 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>	
+	<ItemGroup>
+	  <None Remove="Resources\drawable\skull_crossbones_notification.png" />
+	</ItemGroup>	
 	<!--<ItemGroup>
 	  <None Remove="Resources\drawable\ic_notification.png" />
 	</ItemGroup>-->	
