@@ -19,9 +19,9 @@
 		<ApplicationId>com.steve.DMMSAlerts</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.2.0</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
-		<AndroidVersionCode>2</AndroidVersionCode>
+		<ApplicationDisplayVersion>1.4.0</ApplicationDisplayVersion>
+		<ApplicationVersion>4</ApplicationVersion>
+		<AndroidVersionCode>4</AndroidVersionCode>
 
 		<!-- Android-specific settings -->
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">34.0</SupportedOSPlatformVersion>
