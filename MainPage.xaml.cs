@@ -67,7 +67,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private readonly List<(DateTime Time, float SpeedKnots)> airspeedHistory = new List<(DateTime, float)>();
     private const double AccelerationThreshold = 0.5; // knots/s
     private const double MinAlertSpeed = 40; // knots
-    private const double AirportProximityKm = 5; // km
+    private const double AirportProximityKm = .9; // km
     private const double AccelerationWindowSeconds = 2; // seconds
     private readonly IPlatformService _platformService;
     private bool _isMonitoringStarted = false;
@@ -382,7 +382,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 if (airports.Any() && altitudeFeet.HasValue && closestAirport != null)
                 {
                     double altitudeDifference = altitudeFeet.Value - closestAirport.Elev;
-                    DisableAlerts = altitudeDifference < 10;
+                    DisableAlerts = altitudeDifference < 10 && isNearAirport;
                     System.Diagnostics.Debug.WriteLine($"MainPage: Altitude Difference: {altitudeDifference:F0} ft, DisableAlerts: {DisableAlerts}");
                 }
                 else
@@ -392,7 +392,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
                 // Check for acceleration plateau
                 bool isPlateau = false;
-                if (isDmmsValid && speedKnots > MinAlertSpeed && speedKnots < dmmsKnots && isNearAirport)
+                if (isDmmsValid && speedKnots > MinAlertSpeed && speedKnots < dmmsKnots )
                 {
                     isPlateau = IsAccelerationPlateau();
                     if (isPlateau)
