@@ -33,7 +33,7 @@ public class PlatformService : IPlatformService
                 System.Diagnostics.Debug.WriteLine("PlatformService: Showing custom permission popup");
                 var dialog = new AlertDialog.Builder(activity)
                     .SetTitle("Set Location Settings to ALL THE TIME and it may save your life.")
-                    .SetMessage("Your device location data is used to calculate speed in knots. These data never leave the app and are not collected. The location is checked in background until you click to [=== PAUSE  ===]")
+                    .SetMessage("Your device location data is used to calculate speed in knots. These data never leave the app and are not collected. The location is checked in background until you click to [=== PAUSE  ===].  2 nice to have permission popups included to allow for Notifications and Disable Battery Optimization.")
                     .SetPositiveButton("OK", (s, e) =>
                     {
                         System.Diagnostics.Debug.WriteLine("PlatformService: User clicked OK on custom popup");
