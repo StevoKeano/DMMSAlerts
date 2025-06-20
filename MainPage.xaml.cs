@@ -86,6 +86,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private readonly TimeSpan ttsTestDuration = TimeSpan.FromSeconds(5);
     private double _zeroGStallSpeed;
     private float _lastX, _lastY, _lastZ; // Store last accelerometer readings
+
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
@@ -149,12 +150,13 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 {
                     _zeroGStallSpeed = parsedValue;
                     System.Diagnostics.Debug.WriteLine($"MainPage: Updated _zeroGStallSpeed to {parsedValue:F0} knots");
-                    // Update StallSpeedLabel with new _zeroGStallSpeed
+                    // Force update StallSpeedLabel
                     double gForce = CalculateGForceFromLastReading();
                     double adjustedStallSpeed = AdjustStallSpeed(gForce);
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
                         StallSpeedLabel.Text = $"G-Adjusted Stall Speed: {adjustedStallSpeed:F0} knots";
+                        System.Diagnostics.Debug.WriteLine($"MainPage: Updated StallSpeedLabel to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
                     });
                 }
                 else
@@ -254,6 +256,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         var status = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
         return status == PermissionStatus.Granted;
     }
+
+    public bool IsUsingGpsSpeed => Preferences.Get("ManualIAS", 0f) == 0;
     public MainPage(IPlatformService platformService, LocationService locationService)
     {
         // Load settings at startup
@@ -312,6 +316,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         OnPropertyChanged(nameof(ShowSkullWarning));
         OnPropertyChanged(nameof(ClosestAirportText));
         OnPropertyChanged(nameof(AirportCallOuts));
+        OnPropertyChanged(nameof(IsUsingGpsSpeed));
 
 
         // Load airports from CSV // Test TTS on startup
@@ -356,7 +361,19 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     Speed = androidLocation.HasSpeed ? androidLocation.Speed : null
                 };
 
-                float speedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
+                //float speedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
+                float speedKnots;
+                float iasKnots = Preferences.Get("ManualIAS", 0f);
+                if (iasKnots > 0)
+                {
+                    speedKnots = iasKnots;
+                    System.Diagnostics.Debug.WriteLine($"MainPage: Using manual IAS: {speedKnots:F0} knots");
+                }
+                else
+                {
+                    speedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
+                    System.Diagnostics.Debug.WriteLine($"MainPage: Using GPS groundspeed: {speedKnots:F0} knots");
+                }
                 double? altitudeFeet = location.Altitude.HasValue ? location.Altitude.Value * 3.28084 : null;
 
                 //LatitudeText = $"Latitude: {location.Latitude:F0}";
@@ -456,14 +473,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             }
         }); 
     }
-    private double CalculateGForceFromLastReading()
-    {
-        double totalAcceleration = Math.Sqrt(_lastX * _lastX + _lastY * _lastY + _lastZ * _lastZ);
-        double gForce = totalAcceleration / 9.81;
-        double zGForce = Math.Abs(_lastZ / 9.81);
-        System.Diagnostics.Debug.WriteLine($"MainPage: Using last G-Force: {zGForce:F2}");
-        return zGForce;
-    }
 
     private void OnAccelerometerReadingChanged(object sender, AccelerometerChangedEventArgs e)
     {
@@ -491,16 +500,33 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
     private double CalculateGForce(float x, float y, float z)
     {
-        // Total acceleration (m/s²) including gravity
         double totalAcceleration = Math.Sqrt(x * x + y * y + z * z);
-        // G-force = total acceleration / gravity (9.81 m/s²)
         double gForce = totalAcceleration / 9.81;
+        System.Diagnostics.Debug.WriteLine($"MainPage: Raw G-Force: {gForce:F2}, X: {x:F2}, Y: {y:F2}, Z: {z:F2}, TotalAccel: {totalAcceleration:F2} m/s²");
+        if (totalAcceleration < 8.0) // Below expected gravity (~9.81 m/s²)
+        {
+            System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid acceleration, assuming 1G");
+            return 1.0;
+        }
+        return gForce;
+    }
 
-        // Adjust for vertical axis (z) if needed; assumes z is vertical
-        // For aviation, we often care about z-axis G's (normal to aircraft)
-        double zGForce = Math.Abs(z / 9.81); // Absolute for stall speed calc
-        System.Diagnostics.Debug.WriteLine($"Raw G-Force: {gForce:F2}, Z-Axis G-Force: {zGForce:F2}");
-        return zGForce; // Use z-axis for stall speed adjustment
+    private double CalculateGForceFromLastReading()
+    {
+        if (Math.Abs(_lastX) < 0.1 && Math.Abs(_lastY) < 0.1 && Math.Abs(_lastZ) < 0.1)
+        {
+            System.Diagnostics.Debug.WriteLine("MainPage: No accelerometer data, assuming 1G");
+            return 1.0;
+        }
+        double totalAcceleration = Math.Sqrt(_lastX * _lastX + _lastY * _lastY + _lastZ * _lastZ);
+        double gForce = totalAcceleration / 9.81;
+        System.Diagnostics.Debug.WriteLine($"MainPage: Last G-Force: {gForce:F2}, X: {_lastX:F2}, Y: {_lastY:F2}, Z: {_lastZ:F2}, TotalAccel: {totalAcceleration:F2} m/s²");
+        if (totalAcceleration < 8.0) // Below expected gravity
+        {
+            System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid last acceleration, assuming 1G");
+            return 1.0;
+        }
+        return gForce;
     }
 
     private double AdjustStallSpeed(double gForce)

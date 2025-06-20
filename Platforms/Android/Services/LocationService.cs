@@ -319,8 +319,10 @@ public class LocationMessage
 {
     public Location Location { get; }
     public DateTime UpdateTime { get; }
+
     public LocationMessage(Location location, DateTime updateTime)
     {
+
         Location = location;
         UpdateTime = updateTime;
     }

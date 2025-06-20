@@ -97,6 +97,8 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
         BindingContext = this;
 
         // Load saved settings or defaults
+        Preferences.Set("ManualIAS", float.TryParse(ManualIasEntry.Text, out float ias) ? ias : 0f);
+        Preferences.Set("ManualIASUpdated", true); // Flag to trigger adjustment calculation
         MessageFrequency = Preferences.Get("MessageFrequency", 5f); // Match MainPage default
         ShowSkull = Preferences.Get("ShowSkull", true);
         AutoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true); // Match MainPage default

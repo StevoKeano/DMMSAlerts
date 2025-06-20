@@ -90,6 +90,7 @@
                 </Border>
 
                 <!-- App Logo -->
+                <Label Text="Note: Stall alerts use GPS groundspeed, assuming calm winds" Style="{StaticResource SubHeadline}" IsVisible="{Binding IsUsingGpsSpeed}" />
                 <Border Stroke="Transparent"
                         StrokeShape="RoundRectangle 20"
                         BackgroundColor="Transparent"
