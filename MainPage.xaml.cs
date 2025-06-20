@@ -87,6 +87,11 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private double _zeroGStallSpeed;
     private float _lastX, _lastY, _lastZ; // Store last accelerometer readings
 
+    private Microsoft.Maui.Devices.Sensors.Location lastLocation; // Last known location
+    private float windAdjustment = 0f; // Wind effect in knots (ManualIAS - GPS speed)
+    private double referenceHeading = 0.0; // Heading when ManualIAS was set (degrees)
+    private bool isWindAdjustmentSet = false; // Flag to enable wind adjustment
+
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
@@ -156,7 +161,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
                         StallSpeedLabel.Text = $"G-Adjusted Stall Speed: {adjustedStallSpeed:F0} knots";
-                        System.Diagnostics.Debug.WriteLine($"MainPage: Updated StallSpeedLabel to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
+                        System.Diagnostics.Debug.WriteLine($"MainPage:DmmsText.set() Updated StallSpeedLabel to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
                     });
                 }
                 else
@@ -281,6 +286,27 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         _platformService = platformService;
         _locationService = locationService;
 
+        // Register for ManualIAS changes
+        WeakReferenceMessenger.Default.Register<ManualIASChangedMessage>(this, (recipient, message) =>
+        {
+            float manualIAS = message.ManualIAS;
+            if (manualIAS > 0 && lastLocation != null)
+            {
+                float gpsSpeedKnots = (float)(lastLocation.Speed.GetValueOrDefault() / 0.514444);
+                windAdjustment = manualIAS - gpsSpeedKnots;
+                referenceHeading = lastLocation.Course ?? 0;
+                isWindAdjustmentSet = true;
+                System.Diagnostics.Debug.WriteLine($"MainPage: Wind adjustment set: {windAdjustment:F1} knots at heading {referenceHeading:F0}°");
+            }
+            else
+            {
+                isWindAdjustmentSet = false;
+                System.Diagnostics.Debug.WriteLine("MainPage: ManualIAS update ignored: Invalid ManualIAS or no location data");
+            }
+            OnPropertyChanged(nameof(IsUsingGpsSpeed)); // Update UI
+            System.Diagnostics.Debug.WriteLine($"MainPage: IsUsingGpsSpeed = {IsUsingGpsSpeed}");
+        });
+
         // Start accelerometer
         if (Accelerometer.IsSupported)
         {
@@ -358,32 +384,57 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     Latitude = androidLocation.Latitude,
                     Longitude = androidLocation.Longitude,
                     Altitude = androidLocation.HasAltitude ? androidLocation.Altitude : null,
-                    Speed = androidLocation.HasSpeed ? androidLocation.Speed : null
+                    Speed = androidLocation.HasSpeed ? androidLocation.Speed : null,
+                    Course = androidLocation.HasBearing ? androidLocation.Bearing : null // Heading in degrees
                 };
 
-                //float speedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
-                float speedKnots;
-                float iasKnots = Preferences.Get("ManualIAS", 0f);
-                if (iasKnots > 0)
+                // Update lastLocation
+                lastLocation = location;
+
+                // Calculate GPS speed in knots
+                float gpsSpeedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444); // Convert m/s to knots
+                double currentHeading = location.Course ?? 0; // Current heading in degrees                                                              // Apply wind adjustment if ManualIAS is set and heading is available
+                float adjustedSpeedKnots;
+                float windComponent = 0f; // Initialize wind component
+
+                // Removed as the windComponent is only calculated from IAS once from Options Page 
+                //float iasKnots = Preferences.Get("ManualIAS", 0f);
+                //// Apply wind adjustment if ManualIAS is set and heading is available
+                //float adjustedSpeedKnots;
+                //float windComponent = 0f; // Initialize wind component
+                //if (iasKnots > 0 && !isWindAdjustmentSet && location.Course.HasValue)
+                //{
+                //    // Calculate wind adjustment based on ManualIAS and current GPS speed
+                //    windAdjustment = iasKnots - gpsSpeedKnots;
+                //    referenceHeading = currentHeading;
+                //    isWindAdjustmentSet = true;
+                //    System.Diagnostics.Debug.WriteLine($"Wind adjustment set: {windAdjustment:F1} knots at heading {referenceHeading:F1}°");
+                //}
+
+                if (isWindAdjustmentSet && location.Course.HasValue)
                 {
-                    speedKnots = iasKnots;
-                    System.Diagnostics.Debug.WriteLine($"MainPage: Using manual IAS: {speedKnots:F0} knots");
+                    // Calculate heading difference (normalized to 0-360°)
+                    double headingDiff = (currentHeading - referenceHeading + 360) % 360;
+                    // Wind component scales with cosine, flipping at 180°
+                    windComponent = windAdjustment * (float)Math.Cos(headingDiff * Math.PI / 180);
+                    adjustedSpeedKnots = gpsSpeedKnots + windComponent;
+                    System.Diagnostics.Debug.WriteLine($"Adjusted speed: {adjustedSpeedKnots:F0} knots (GPS: {gpsSpeedKnots:F0}, Wind: {windComponent:F1})");
                 }
                 else
                 {
-                    speedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
-                    System.Diagnostics.Debug.WriteLine($"MainPage: Using GPS groundspeed: {speedKnots:F0} knots");
+                    adjustedSpeedKnots = gpsSpeedKnots; // Use raw GPS speed if no adjustment or no heading
+                    System.Diagnostics.Debug.WriteLine($"Using raw GPS speed: {adjustedSpeedKnots:F0} knots");
                 }
+
                 double? altitudeFeet = location.Altitude.HasValue ? location.Altitude.Value * 3.28084 : null;
 
-                //LatitudeText = $"Latitude: {location.Latitude:F0}";
-                //LongitudeText = $"Longitude: {location.Longitude:F0}";
+                // Update UI elements with adjusted speed
                 AltitudeText = $"Altitude: {altitudeFeet?.ToString("F0") ?? "N/A"} ft";
-                SpeedText = $"Speed: {speedKnots:F0} knots";
+                SpeedText = $"Speed: {adjustedSpeedKnots:F0} knots";
                 LastUpdateText = $"Updated: {updateTime:HH:mm:ss}";
 
-                // Track airspeed for acceleration
-                airspeedHistory.Add((DateTime.Now, speedKnots));
+                // Track adjusted speed for acceleration
+                airspeedHistory.Add((DateTime.Now, adjustedSpeedKnots));
                 // Keep only last 5 seconds of data
                 airspeedHistory.RemoveAll(x => (DateTime.Now - x.Time).TotalSeconds > 5);
 
@@ -396,31 +447,31 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     int heading = await UpdateMagneticHeadingAsync(location.Latitude, location.Longitude, closestAirport.Latitude, closestAirport.Longitude);
                     double distanceKm = CalculateDistance(location.Latitude, location.Longitude, closestAirport.Latitude, closestAirport.Longitude);
                     ClosestAirportText = $"Closest Airport: {closestAirport.StationId}, {(int)Math.Round(distanceKm * kmtomiles)} miles bearing {heading}° {closestAirport.Elev} feet";
-                    isNearAirport = distanceKm <= AirportProximityKm;                    
+                    isNearAirport = distanceKm <= AirportProximityKm;
                     Log.Debug("MainPage", $"Closest airport: {closestAirport.StationId} Elev: {closestAirport.Elev.ToString("F0")}ft at {closestAirport.Latitude},{closestAirport.Longitude}, Distance: {distanceKm:F2} km");
                     Log.Debug("MainPage", $"Heading to closest airport: {heading}°");
                     if (airportCallOuts && lastStationID != closestAirport.StationId)
-                    {                         
-                            lastStationID = closestAirport.StationId;
-                            await TextToSpeech.Default.SpeakAsync(
-                                ClosestAirportText.Replace("Closest Airport:", ""),
-                                new SpeechOptions { Volume = TTSAlertVolume});                        
+                    {
+                        lastStationID = closestAirport.StationId;
+                        await TextToSpeech.Default.SpeakAsync(
+                            ClosestAirportText.Replace("Closest Airport:", ""),
+                            new SpeechOptions { Volume = TTSAlertVolume });
                     }
                 }
 
                 float speedKmh = (float)(location.Speed.GetValueOrDefault() * 3.6);
-                Debug.WriteLine($"MainPage: Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({speedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
-                Log.Debug("MainPage", $"Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({speedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
+                Debug.WriteLine($"MainPage: Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({adjustedSpeedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
+                Log.Debug("MainPage", $"Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({adjustedSpeedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
 
                 float dmmsKnots = 0f;
                 bool isDmmsValid = IsActive && float.TryParse(DmmsText, out dmmsKnots) && dmmsKnots > 0;
 
-                // Calculate adjusted stall speed using latest G-force
-                double gForce = CalculateGForceFromLastReading(); // New helper method
-                double adjustedStallSpeed = AdjustStallSpeed(gForce);
+                // Calculate adjusted stall speed using latest G-force (without wind component)
+                double gForce = CalculateGForceFromLastReading();
+                double adjustedStallSpeed = AdjustStallSpeed(gForce); // Only G-force adjustment
 
                 // Update warning suppression
-                if (isDmmsValid && speedKnots > adjustedStallSpeed && suppressWarningsUntilAboveDmms)
+                if (isDmmsValid && adjustedSpeedKnots > adjustedStallSpeed && suppressWarningsUntilAboveDmms)
                 {
                     suppressWarningsUntilAboveDmms = false;
                     Log.Debug("MainPage", "Speed exceeded adjusted stall speed, enabling normal alerts");
@@ -440,17 +491,17 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
                 // Check for acceleration plateau
                 bool isPlateau = false;
-                if (isDmmsValid && speedKnots > MinAlertSpeed && speedKnots < dmmsKnots )
+                if (isDmmsValid && adjustedSpeedKnots > MinAlertSpeed && adjustedSpeedKnots < dmmsKnots)
                 {
                     isPlateau = IsAccelerationPlateau();
                     if (isPlateau)
                     {
-                        Log.Debug("MainPage", $"Acceleration plateau detected at {speedKnots:F1} knots, below DMMS {dmmsKnots:F1}");
+                        Log.Debug("MainPage", $"Acceleration plateau detected at {adjustedSpeedKnots:F1} knots, below DMMS {dmmsKnots:F1}");
                     }
                 }
 
-                // Trigger alerts
-                if (!DisableAlerts && isDmmsValid && speedKnots < adjustedStallSpeed && (isPlateau || !suppressWarningsUntilAboveDmms))
+                // Trigger alerts using adjusted speed
+                if (!DisableAlerts && isDmmsValid && adjustedSpeedKnots < adjustedStallSpeed && (isPlateau || !suppressWarningsUntilAboveDmms))
                 {
                     if (!IsFlashing)
                     {
@@ -458,7 +509,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                         ShowSkullWarning = Preferences.Get("ShowSkull", false);
                         await StartFlashingBackground();
                         BringAppToForeground();
-                        System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Speed {speedKnots:F1} < Adjusted Stall Speed {adjustedStallSpeed:F1}, G-Force: {gForce:F2}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}");
+                        System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Adjusted Speed {adjustedSpeedKnots:F1} < Adjusted Stall Speed {adjustedStallSpeed:F1}, G-Force: {gForce:F2}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}, Wind Component: {windComponent:F1}");
                     }
                 }
                 else if (IsFlashing)
@@ -471,9 +522,14 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 Log.Error("MainPage", $"Message handler error: {ex.Message}\n{ex.StackTrace}");
                 Debug.WriteLine($"MainPage: Message handler error: {ex.Message}\n{ex.StackTrace}");
             }
-        }); 
+        });
     }
 
+    public class ManualIASChangedMessage
+    {
+        public float ManualIAS { get; }
+        public ManualIASChangedMessage(float manualIAS) => ManualIAS = manualIAS;
+    }
     private void OnAccelerometerReadingChanged(object sender, AccelerometerChangedEventArgs e)
     {
         try
@@ -484,8 +540,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             _lastZ = data.Z;
             double gForce = CalculateGForce(data.X, data.Y, data.Z);
             double adjustedStallSpeed = AdjustStallSpeed(gForce);
-
-            System.Diagnostics.Debug.WriteLine($"G-Force: {gForce:F2}, Adjusted Stall Speed: {adjustedStallSpeed:F0} knots");
+            System.Diagnostics.Debug.WriteLine($"MainPage:OnAccelerometerReadingChanged Updated adjustedStallSpeed to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -1232,13 +1287,33 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         messageFrequency = Preferences.Get("MessageFrequency", 5f);
         showSkull = Preferences.Get("ShowSkull", true);
         autoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true);
-        airportCallOuts = Preferences.Get("AirportCallOuts", false); // Add this
+        airportCallOuts = Preferences.Get("AirportCallOuts", false);
         ShowSkullWarning = IsFlashing && showSkull;
         OnPropertyChanged(nameof(TTSAlertVolume));
         OnPropertyChanged(nameof(WarningLabelText));
         OnPropertyChanged(nameof(ShowSkullWarning));
         OnPropertyChanged(nameof(AirportCallOuts));
         Log.Debug("MainPage", $"OnAppearing - Reloaded settings: WarningLabelText: {warningLabelText}, TtsAlertText: {ttsAlertText}, MessageFrequency: {messageFrequency}, ShowSkull: {showSkull}, AirportCallOuts:{airportCallOuts}, AutoActivateMonitoring: {autoActivateMonitoring}, ShowSkullWarning: {showSkullWarning}, SuppressWarnings: {suppressWarningsUntilAboveDmms}");
+
+        // Handle ManualIAS update for wind adjustment
+        if (Preferences.Get("ManualIASUpdated", false))
+        {
+            float manualIAS = Preferences.Get("ManualIAS", 0f);
+            if (manualIAS > 0 && lastLocation != null) // Ensure valid input and location
+            {
+                float gpsSpeedKnots = (float)(lastLocation.Speed.GetValueOrDefault() / 0.514444); // Convert m/s to knots
+                windAdjustment = manualIAS - gpsSpeedKnots; // Wind effect
+                referenceHeading = lastLocation.Course ?? 0; // Store heading at this moment
+                isWindAdjustmentSet = true;
+                System.Diagnostics.Debug.WriteLine($"Wind adjustment set: {windAdjustment:F1} knots at heading {referenceHeading:F0}°");
+            }
+            else
+            {
+                isWindAdjustmentSet = false; // Disable adjustment if conditions not met
+                System.Diagnostics.Debug.WriteLine("ManualIAS update ignored: Invalid ManualIAS or no location data");
+            }
+            Preferences.Set("ManualIASUpdated", false); // Reset the update flag
+        }
 
         await UpdateCounterBtnState();
     }

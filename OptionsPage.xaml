@@ -37,7 +37,7 @@
                TextColor="{StaticResource White}" />
             </Border>
             <!-- DMMS Message Frequency -->
-            <Entry x:Name="ManualIasEntry" Placeholder="Enter IAS (knots, optional)" Keyboard="Numeric" Text="{Binding ManualIAS}" />
+            <Entry x:Name="ManualIasEntry" Placeholder="For wind correction, Head Upwind'n Enter IAS (knots, optional) " Keyboard="Numeric" Text="{Binding ManualIAS}" />
             <Label Text="DMMS Violation Message Frequency (seconds)"
                    Style="{StaticResource Headline}"
                    SemanticProperties.HeadingLevel="Level2" />
