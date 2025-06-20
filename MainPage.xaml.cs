@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Numerics;
+using Microsoft.Maui.Devices.Sensors;
 
 namespace AviationApp;
 
@@ -66,7 +68,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     // New: Track airspeed history for acceleration
     private readonly List<(DateTime Time, float SpeedKnots)> airspeedHistory = new List<(DateTime, float)>();
     private const double AccelerationThreshold = 0.5; // knots/s
-    private const double MinAlertSpeed = 40; // knots
+    private const double MinAlertSpeed = 30; // knots
     private const double AirportProximityKm = .9; // km
     private const double AccelerationWindowSeconds = 2; // seconds
     private readonly IPlatformService _platformService;
@@ -82,7 +84,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private readonly object TtsTestLock = new object();
     private DateTime lastVolumeChange = DateTime.MinValue;
     private readonly TimeSpan ttsTestDuration = TimeSpan.FromSeconds(5);
-
+    private double _zeroGStallSpeed;
+    private float _lastX, _lastY, _lastZ; // Store last accelerometer readings
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
@@ -142,6 +145,22 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 OnPropertyChanged();
                 Preferences.Set("DmmsValue", value);
                 Log.Debug("MainPage", $"Saved DmmsText to Preferences: {value}");
+                if (double.TryParse(dmmsText, out double parsedValue))
+                {
+                    _zeroGStallSpeed = parsedValue;
+                    System.Diagnostics.Debug.WriteLine($"MainPage: Updated _zeroGStallSpeed to {parsedValue:F0} knots");
+                    // Update StallSpeedLabel with new _zeroGStallSpeed
+                    double gForce = CalculateGForceFromLastReading();
+                    double adjustedStallSpeed = AdjustStallSpeed(gForce);
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        StallSpeedLabel.Text = $"G-Adjusted Stall Speed: {adjustedStallSpeed:F0} knots";
+                    });
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"MainPage: Failed to parse DmmsText '{value}' to double");
+                }
             }
         }
     }
@@ -239,6 +258,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     {
         // Load settings at startup
         dmmsText = Preferences.Get("DmmsValue", "70");
+        double.TryParse(dmmsText, out _zeroGStallSpeed);
         airportCallOuts = Preferences.Get("AirportCallOuts", false);
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
@@ -256,6 +276,13 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         InitializeComponent();
         _platformService = platformService;
         _locationService = locationService;
+
+        // Start accelerometer
+        if (Accelerometer.IsSupported)
+        {
+            Accelerometer.ReadingChanged += OnAccelerometerReadingChanged;
+            Accelerometer.Start(SensorSpeed.UI);
+        }
 
         // Initialize based on settings (AutoActivateMonitoring: True from log)
         _isMonitoringStarted = autoActivateMonitoring; // Respect AutoActivateMonitoring
@@ -371,11 +398,15 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 float dmmsKnots = 0f;
                 bool isDmmsValid = IsActive && float.TryParse(DmmsText, out dmmsKnots) && dmmsKnots > 0;
 
+                // Calculate adjusted stall speed using latest G-force
+                double gForce = CalculateGForceFromLastReading(); // New helper method
+                double adjustedStallSpeed = AdjustStallSpeed(gForce);
+
                 // Update warning suppression
-                if (isDmmsValid && speedKnots > dmmsKnots && suppressWarningsUntilAboveDmms)
+                if (isDmmsValid && speedKnots > adjustedStallSpeed && suppressWarningsUntilAboveDmms)
                 {
                     suppressWarningsUntilAboveDmms = false;
-                    Log.Debug("MainPage", "Speed exceeded DMMS, enabling normal alerts");
+                    Log.Debug("MainPage", "Speed exceeded adjusted stall speed, enabling normal alerts");
                 }
 
                 // Calculate feet above closest airport; disable alerts if less than 10 feet
@@ -402,15 +433,15 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 }
 
                 // Trigger alerts
-                if (!DisableAlerts && isDmmsValid && speedKnots < dmmsKnots && (isPlateau || !suppressWarningsUntilAboveDmms))
+                if (!DisableAlerts && isDmmsValid && speedKnots < adjustedStallSpeed && (isPlateau || !suppressWarningsUntilAboveDmms))
                 {
                     if (!IsFlashing)
                     {
                         IsFlashing = true;
-                        ShowSkullWarning = Preferences.Get("ShowSkull", false); // Respect user setting
+                        ShowSkullWarning = Preferences.Get("ShowSkull", false);
                         await StartFlashingBackground();
                         BringAppToForeground();
-                        System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Speed {speedKnots:F1} < DMMS {dmmsKnots:F1}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}");
+                        System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Speed {speedKnots:F1} < Adjusted Stall Speed {adjustedStallSpeed:F1}, G-Force: {gForce:F2}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}");
                     }
                 }
                 else if (IsFlashing)
@@ -425,7 +456,72 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             }
         }); 
     }
+    private double CalculateGForceFromLastReading()
+    {
+        double totalAcceleration = Math.Sqrt(_lastX * _lastX + _lastY * _lastY + _lastZ * _lastZ);
+        double gForce = totalAcceleration / 9.81;
+        double zGForce = Math.Abs(_lastZ / 9.81);
+        System.Diagnostics.Debug.WriteLine($"MainPage: Using last G-Force: {zGForce:F2}");
+        return zGForce;
+    }
 
+    private void OnAccelerometerReadingChanged(object sender, AccelerometerChangedEventArgs e)
+    {
+        try
+        {
+            var data = e.Reading.Acceleration;
+            _lastX = data.X; // Store readings
+            _lastY = data.Y;
+            _lastZ = data.Z;
+            double gForce = CalculateGForce(data.X, data.Y, data.Z);
+            double adjustedStallSpeed = AdjustStallSpeed(gForce);
+
+            System.Diagnostics.Debug.WriteLine($"G-Force: {gForce:F2}, Adjusted Stall Speed: {adjustedStallSpeed:F0} knots");
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StallSpeedLabel.Text = $"G-Adjusted Stall Speed: {adjustedStallSpeed:F0} knots";
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Accelerometer error: {ex.Message}");
+        }
+    }
+
+    private double CalculateGForce(float x, float y, float z)
+    {
+        // Total acceleration (m/s²) including gravity
+        double totalAcceleration = Math.Sqrt(x * x + y * y + z * z);
+        // G-force = total acceleration / gravity (9.81 m/s²)
+        double gForce = totalAcceleration / 9.81;
+
+        // Adjust for vertical axis (z) if needed; assumes z is vertical
+        // For aviation, we often care about z-axis G's (normal to aircraft)
+        double zGForce = Math.Abs(z / 9.81); // Absolute for stall speed calc
+        System.Diagnostics.Debug.WriteLine($"Raw G-Force: {gForce:F2}, Z-Axis G-Force: {zGForce:F2}");
+        return zGForce; // Use z-axis for stall speed adjustment
+    }
+
+    private double AdjustStallSpeed(double gForce)
+    {
+        if (gForce < 0.01) // Near 0G, stall speed approaches 0
+        {
+            return 0;
+        }
+        // Adjusted stall speed = 0G stall speed * sqrt(abs(load factor))
+        return _zeroGStallSpeed * Math.Sqrt(Math.Abs(gForce));
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        if (Accelerometer.IsSupported)
+        {
+            Accelerometer.Stop();
+            Accelerometer.ReadingChanged -= OnAccelerometerReadingChanged;
+        }
+    }
     private void ShowSkullNotification(bool isActive)
     {
 #if ANDROID

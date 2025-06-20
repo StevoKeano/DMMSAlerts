@@ -139,6 +139,7 @@
                        HorizontalTextAlignment="Center"
                        SemanticProperties.HeadingLevel="Level2"
                        SemanticProperties.Description="DMMS (KNOTS)" />
+                <Label x:Name="StallSpeedLabel" Text="Stall Speed: 0 knots" Style="{StaticResource SubHeadline}" />                
                 <Slider x:Name="TTSVolumeSlider"
                         Minimum="0.5"
                         Maximum="1.0"
