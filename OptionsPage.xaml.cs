@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -93,17 +94,38 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
         }
     }
 
+
+    private readonly ObservableCollection<int> _iasOptions = new ObservableCollection<int>(); // Empty initially
+    private int _selectedIas;
+
+    public ObservableCollection<int> IasOptions => _iasOptions;
+    public int SelectedIas
+    {
+        get => _selectedIas;
+        set
+        {
+            _selectedIas = value;
+            OnPropertyChanged(); // Notify UI
+        }
+    }
     // Constructor: Minimal initialization
     public OptionsPage()
     {
         InitializeComponent();
         BindingContext = this;
+        // Initialize _iasOptions with 0, 20–150
+        _iasOptions.Add(0); // Add 0 for disabling IAS
+        foreach (int i in Enumerable.Range(4, 27).Select(i => i * 5)) // 20–150
+        {
+            _iasOptions.Add(i);
+        }
     }
-
+    
     // Load settings when page appears
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        SelectedIas = (int)Preferences.Get("ManualIAS", 0f); // Load saved IAS
         // Load saved preferences into UI
         ManualIasEntry.Text = Preferences.Get("ManualIAS", 0f).ToString("F1");
         MessageFrequencyEntry.Text = Preferences.Get("MessageFrequency", 5f).ToString("F1");
@@ -124,7 +146,9 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
             await DisplayAlert("Error", "Please enter a valid frequency (seconds > 0).", "OK");
             return;
         }
-        float ias = float.TryParse(ManualIasEntry.Text, out float value) ? value : 0f;
+        //float ias = float.TryParse(ManualIasEntry.Text, out float value) ? value : 0f;
+        float ias = SelectedIas;
+        System.Diagnostics.Debug.WriteLine($"OptionsPage: Selected IAS={ias:F1}");
         Preferences.Set("ManualIAS", ias);
         Preferences.Set("ManualIASUpdated", true); // Flag to trigger adjustment calculation
         WeakReferenceMessenger.Default.Send(new ManualIASChangedMessage(ias)); // Notify MainPage
