@@ -1,4 +1,6 @@
-﻿using Android.Content;
+﻿using System.Net.Http;
+using System.Text.Json;
+using Android.Content;
 using Android.Locations;
 using Android.Util;
 using AviationApp.Services;
@@ -47,7 +49,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private bool isFlashing = false;
     private bool showSkullWarning = true;
     private bool showSkull;
-    private bool airportCallOuts = false;
+    private bool airportCallOuts = true;
+    private string windCorrection = "Note: Stall alerts use GPS groundspeed, assuming calm winds";
     private Color pageBackground = Colors.Transparent;
     private CancellationTokenSource flashingCts = null;
     private CancellationTokenSource ttsCts = null;
@@ -249,6 +252,9 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         public string Site { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+        public int WindSpeed { get; set; } // Wind speed in knots
+        public int WindGust { get; set; } // Wind gusts in knots
+        public int Direction { get; set; } // Wind direction in degrees
     }
 
     private void UpdateSkullVisibility()
@@ -263,12 +269,18 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     }
 
     public bool IsUsingGpsSpeed => Preferences.Get("ManualIAS", 0f) == 0;
+    public bool IsUsingIASSpeed => !(Preferences.Get("ManualIAS", 0f) == 0);
+    public string WindCorrection
+    {
+        get => windCorrection;
+        set { windCorrection = value; OnPropertyChanged(); }
+    }
     public MainPage(IPlatformService platformService, LocationService locationService)
     {
         // Load settings at startup
         dmmsText = Preferences.Get("DmmsValue", "70");
         double.TryParse(dmmsText, out _zeroGStallSpeed);
-        airportCallOuts = Preferences.Get("AirportCallOuts", false);
+        airportCallOuts = Preferences.Get("AirportCallOuts", true);
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
         messageFrequency = Preferences.Get("MessageFrequency", 5f);
@@ -283,9 +295,9 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f); // Default to full volume
 
         InitializeComponent();
+        Preferences.Set("ManualIAS", 0f); // Reset ManualIAS to 0 at startup
         _platformService = platformService;
         _locationService = locationService;
-
         // Register for ManualIAS changes
         WeakReferenceMessenger.Default.Register<ManualIASChangedMessage>(this, (recipient, message) =>
         {
@@ -304,7 +316,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 System.Diagnostics.Debug.WriteLine("MainPage: ManualIAS update ignored: Invalid ManualIAS or no location data");
             }
             OnPropertyChanged(nameof(IsUsingGpsSpeed)); // Update UI
-            System.Diagnostics.Debug.WriteLine($"MainPage: IsUsingGpsSpeed = {IsUsingGpsSpeed}");
+            OnPropertyChanged(nameof(IsUsingIASSpeed)); // Update UI
+            System.Diagnostics.Debug.WriteLine($"MainPage: IsUsingGpsSpeed = {IsUsingGpsSpeed}IsUsingIASSpeed = {IsUsingIASSpeed}");
         });
 
         // Start accelerometer
@@ -343,6 +356,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         OnPropertyChanged(nameof(ClosestAirportText));
         OnPropertyChanged(nameof(AirportCallOuts));
         OnPropertyChanged(nameof(IsUsingGpsSpeed));
+        OnPropertyChanged(nameof(IsUsingIASSpeed));
+        OnPropertyChanged(nameof(WindCorrection));
 
 
         // Load airports from CSV // Test TTS on startup
@@ -397,20 +412,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 float adjustedSpeedKnots;
                 float windComponent = 0f; // Initialize wind component
 
-                // Removed as the windComponent is only calculated from IAS once from Options Page 
-                //float iasKnots = Preferences.Get("ManualIAS", 0f);
-                //// Apply wind adjustment if ManualIAS is set and heading is available
-                //float adjustedSpeedKnots;
-                //float windComponent = 0f; // Initialize wind component
-                //if (iasKnots > 0 && !isWindAdjustmentSet && location.Course.HasValue)
-                //{
-                //    // Calculate wind adjustment based on ManualIAS and current GPS speed
-                //    windAdjustment = iasKnots - gpsSpeedKnots;
-                //    referenceHeading = currentHeading;
-                //    isWindAdjustmentSet = true;
-                //    System.Diagnostics.Debug.WriteLine($"Wind adjustment set: {windAdjustment:F1} knots at heading {referenceHeading:F1}°");
-                //}
-
                 if (isWindAdjustmentSet && location.Course.HasValue)
                 {
                     // Calculate heading difference (normalized to 0-360°)
@@ -418,7 +419,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     // Wind component scales with cosine, flipping at 180°
                     windComponent = windAdjustment * (float)Math.Cos(headingDiff * Math.PI / 180);
                     adjustedSpeedKnots = gpsSpeedKnots + windComponent;
-                    System.Diagnostics.Debug.WriteLine($"Adjusted speed: {adjustedSpeedKnots:F0} knots (GPS: {gpsSpeedKnots:F0}, Wind: {windComponent:F1})");
+                    WindCorrection = $"Wind {(int)Math.Round(windComponent,0)} knot {(windComponent > 0 ? "headwind" : "tailwind")}"; System.Diagnostics.Debug.WriteLine($"Adjusted speed: {adjustedSpeedKnots:F0} knots (GPS: {gpsSpeedKnots:F0}, Wind: {windComponent:F1})");
                 }
                 else
                 {
@@ -430,7 +431,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
                 // Update UI elements with adjusted speed
                 AltitudeText = $"Altitude: {altitudeFeet?.ToString("F0") ?? "N/A"} ft";
-                SpeedText = $"Speed: {adjustedSpeedKnots:F0} knots";
+                SpeedText = $"{(IsUsingIASSpeed ? "IAS:" : "GPS:")} {adjustedSpeedKnots:F0} knots";
                 LastUpdateText = $"Updated: {updateTime:HH:mm:ss}";
 
                 // Track adjusted speed for acceleration
@@ -525,6 +526,33 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         });
     }
 
+    public static async Task<string> GetWindData(Airport airport)
+    {
+        if (airport == null || double.IsNaN(airport.Latitude))
+        {
+            System.Diagnostics.Debug.WriteLine("GetWindData: Invalid airport or NULL Latitude");
+            return string.Empty;
+        }
+
+        using var client = new HttpClient();
+        try
+        {
+            // Use ICAO code for precise airport METAR data
+            //        var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
+            double lat1 = airport.Latitude - 0.5; // Smaller box for precision
+            double lat2 = airport.Latitude + 0.5;
+            double lon1 = airport.Longitude - 0.5;
+            double lon2 = airport.Longitude + 0.5;
+            var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lon1},{lat1},{lon2},{lat2}&format=json"); System.Diagnostics.Debug.WriteLine($"Wind Data: {response}");
+            System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
+            return response;
+        }
+        catch (HttpRequestException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetWindData Error: {ex.Message}");
+            return string.Empty;
+        }
+    }
     public class ManualIASChangedMessage
     {
         public float ManualIAS { get; }
@@ -1287,7 +1315,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         messageFrequency = Preferences.Get("MessageFrequency", 5f);
         showSkull = Preferences.Get("ShowSkull", true);
         autoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true);
-        airportCallOuts = Preferences.Get("AirportCallOuts", false);
+        airportCallOuts = Preferences.Get("AirportCallOuts", true);
         ShowSkullWarning = IsFlashing && showSkull;
         OnPropertyChanged(nameof(TTSAlertVolume));
         OnPropertyChanged(nameof(WarningLabelText));
@@ -1312,7 +1340,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 isWindAdjustmentSet = false; // Disable adjustment if conditions not met
                 System.Diagnostics.Debug.WriteLine("ManualIAS update ignored: Invalid ManualIAS or no location data");
             }
-            Preferences.Set("ManualIASUpdated", false); // Reset the update flag
+            Preferences.Set("ManualIASUpdated", false); // Reset the update flag            
         }
 
         await UpdateCounterBtnState();

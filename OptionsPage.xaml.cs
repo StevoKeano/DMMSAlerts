@@ -115,7 +115,7 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
         BindingContext = this;
         // Initialize _iasOptions with 0, 20–150
         _iasOptions.Add(0); // Add 0 for disabling IAS
-        foreach (int i in Enumerable.Range(4, 27).Select(i => i * 5)) // 20–150
+        foreach (int i in Enumerable.Range(4, 57).Select(i => i * 5)) // 20–150
         {
             _iasOptions.Add(i);
         }
@@ -125,16 +125,16 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        SelectedIas = (int)Preferences.Get("ManualIAS", 0f); // Load saved IAS
+        SelectedIas = (int)Preferences.Get("ManualIasPicker", 0f); // Load saved IAS
         // Load saved preferences into UI
-        ManualIasEntry.Text = Preferences.Get("ManualIAS", 0f).ToString("F1");
+        //ManualIasEntry.Text = Preferences.Get("/*ManualIAS*/", 0f).ToString("F1");
         MessageFrequencyEntry.Text = Preferences.Get("MessageFrequency", 5f).ToString("F1");
         MessageFrequency = Preferences.Get("MessageFrequency", 5f);
         ShowSkull = Preferences.Get("ShowSkull", true);
         AutoActivateMonitoring = Preferences.Get("AutoActivateMonitoring", true);
         WarningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         TtsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
-        AirportCallOuts = Preferences.Get("AirportCallOuts", false); // Adjusted to match MainPage default
+        AirportCallOuts = Preferences.Get("AirportCallOuts", true); // Adjusted to match MainPage default
         System.Diagnostics.Debug.WriteLine($"OptionsPage: Loaded settings - ManualIAS: {Preferences.Get("ManualIAS", 0f):F1}, MessageFrequency: {MessageFrequency}, ShowSkull: {ShowSkull}, AutoActivateMonitoring: {AutoActivateMonitoring}, WarningLabelText: {WarningLabelText}, TtsAlertText: {TtsAlertText}, AirportCallOuts: {AirportCallOuts}");
     }
 
@@ -163,7 +163,9 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
         // Log saved settings
         System.Diagnostics.Debug.WriteLine($"OptionsPage: Saved settings - AirportCallOuts: {AirportCallOuts}, MessageFrequency: {MessageFrequency}, ShowSkull: {ShowSkull}, AutoActivateMonitoring: {AutoActivateMonitoring}, WarningLabelText: {WarningLabelText}, TtsAlertText: {TtsAlertText}");
 
-        await DisplayAlert("Success", "Settings saved successfully!", "OK");
+        //await DisplayAlert("Success", "Settings saved successfully!", "OK");
+        // With this:
+        await Utility.DisplayAutoDismissAlert("Success", "Settings saved successfully!", "OK");
         await Navigation.PopAsync();
     }
 

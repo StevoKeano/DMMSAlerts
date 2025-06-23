@@ -34,14 +34,16 @@
                 <Button Text="Save Options"
                Style="{StaticResource Button}"
                Clicked="OnSaveClicked"
-               TextColor="{StaticResource White}" />
+               TextColor="{StaticResource White}"
+               />
             </Border>
             <!-- DMMS Message Frequency -->
-            <Picker x:Name="ManualIasPicker" Title="Select IAS (knots)" 
+            <Picker x:Name="ManualIasPicker" Title="For wind correction, Head Upwind'n Enter IAS (knots, optional) " 
         ItemsSource="{Binding IasOptions}" 
-        SelectedItem="{Binding SelectedIas}" 
-        FontSize="18" HeightRequest="50" />
-            <Entry x:Name="ManualIasEntry" Placeholder="For wind correction, Head Upwind'n Enter IAS (knots, optional) " Keyboard="Numeric" Text="{Binding ManualIAS}" />
+        SelectedItem="{Binding SelectedIas, Mode=TwoWay}" 
+        FontSize="24" HeightRequest="50"     
+                    />
+            <!--<Entry x:Name="ManualIasEntry" Placeholder="For wind correction, Head Upwind'n Enter IAS (knots, optional) " Keyboard="Numeric" Text="{Binding ManualIAS}" />-->
             <Label Text="DMMS Violation Message Frequency (seconds)"
                    Style="{StaticResource Headline}"
                    SemanticProperties.HeadingLevel="Level2" />
