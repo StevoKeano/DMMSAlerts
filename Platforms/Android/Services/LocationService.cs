@@ -32,6 +32,7 @@ public class LocationService : Service
             if (locationManager == null)
             {
                 Log.Error("LocationService", "LocationManager is null");
+                System.Diagnostics.Debug.WriteLine("LocationService: LocationManager is null");
                 return;
             }
 
@@ -39,6 +40,7 @@ public class LocationService : Service
             if (!HasLocationPermissions())
             {
                 Log.Error("LocationService", "Location permissions not granted");
+                System.Diagnostics.Debug.WriteLine("LocationService: Location permissions not granted");
                 ShowPermissionDeniedNotification();
                 return;
             }
@@ -48,16 +50,19 @@ public class LocationService : Service
                 locationListener = new LocationListener(this);
                 locationManager.RequestLocationUpdates(LocationManager.GpsProvider, 2000, 5, locationListener);
                 Log.Debug("LocationService", "Requested location updates with GPS provider");
+                System.Diagnostics.Debug.WriteLine("LocationService: Requested GPS updates");
             }
             else if (locationManager.IsProviderEnabled(LocationManager.NetworkProvider))
             {
                 locationListener = new LocationListener(this);
                 locationManager.RequestLocationUpdates(LocationManager.NetworkProvider, 2000, 5, locationListener);
                 Log.Debug("LocationService", "Requested location updates with network provider");
+                System.Diagnostics.Debug.WriteLine("LocationService: Requested Network updates");
             }
             else
             {
                 Log.Error("LocationService", "Both GPS and Network providers are disabled");
+                System.Diagnostics.Debug.WriteLine("LocationService: Both GPS and Network providers disabled");
                 PromptEnableLocation();
                 return;
             }
@@ -71,6 +76,7 @@ public class LocationService : Service
         catch (Exception ex)
         {
             Log.Error("LocationService", $"OnCreate error: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine("LocationService: Failed to create notification");
         }
     }
 
@@ -129,27 +135,32 @@ public class LocationService : Service
     public override StartCommandResult OnStartCommand(Intent intent, StartCommandFlags flags, int startId)
     {
         Log.Debug("LocationService", "OnStartCommand called");
+        System.Diagnostics.Debug.WriteLine("LocationService: OnStartCommand called");
         try
         {
             if (notification == null)
             {
                 Log.Warn("LocationService", "Notification is null, recreating");
+                System.Diagnostics.Debug.WriteLine("LocationService: Notification is null, recreating");
                 notification = CreateNotification();
             }
 
             if (notification == null)
             {
                 Log.Error("LocationService", "Failed to create notification, cannot start foreground service");
+                System.Diagnostics.Debug.WriteLine("LocationService: Failed to create notification");
                 return StartCommandResult.Sticky;
             }
 
             StartForeground(1, notification);
             Log.Debug("LocationService", "Foreground service started");
+            System.Diagnostics.Debug.WriteLine("LocationService: Foreground service started");
             return StartCommandResult.Sticky;
         }
         catch (Exception ex)
         {
             Log.Error("LocationService", $"OnStartCommand error: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"LocationService: OnStartCommand error: {ex.Message}");
             return StartCommandResult.Sticky;
         }
     }
@@ -213,11 +224,14 @@ public class LocationService : Service
 
         public void OnLocationChanged(Location location)
         {
+            Log.Info("DMMSAlerts", $"Entering OnLocationChanged, Time={DateTime.Now:HH:mm:ss}");
+            System.Diagnostics.Debug.WriteLine($"LocationService: Entering OnLocationChanged, Time={DateTime.Now:HH:mm:ss}");           
             try
             {
                 if (location == null)
                 {
                     Log.Error("LocationService", "Received null location");
+                    System.Diagnostics.Debug.WriteLine("LocationService: Received null location");
                     return;
                 }
 
@@ -225,6 +239,7 @@ public class LocationService : Service
                 var runtime = Java.Lang.Runtime.GetRuntime();
                 var usedMemory = (runtime.TotalMemory() - runtime.FreeMemory()) / (1024 * 1024);
                 Log.Debug("LocationService", $"Location updated: Lat={location.Latitude}, Lon={location.Longitude}, Time={DateTime.Now:HH:mm:ss}, MemoryUsed={usedMemory}MB");
+                System.Diagnostics.Debug.WriteLine($"LocationService: Location updated: Lat={location.Latitude}, Lon={location.Longitude}, Speed={location.Speed}, Course={location.Bearing}, Time={DateTime.Now:HH:mm:ss}");
 
                 WeakReferenceMessenger.Default.Send(new LocationMessage(location, DateTime.Now));
                 Log.Debug("LocationService", "Sent LocationMessage");
@@ -236,17 +251,22 @@ public class LocationService : Service
                     {
                         string alertMessage = $"Acceleration plateau detected at {speedKnots:F1} knots, below DMMS {DMMS_THRESHOLD:F1}";
                         Log.Debug("LocationService", $"Triggering alert: {alertMessage}");
+                        System.Diagnostics.Debug.WriteLine($"LocationService: Triggering alert: {alertMessage}");
                         service.TriggerAlert(alertMessage);
                     }
                 }
                 else
                 {
                     Log.Debug("LocationService", "Location has no speed data");
+                    System.Diagnostics.Debug.WriteLine("LocationService: Location has no speed data");
+
                 }
             }
             catch (Exception ex)
             {
                 Log.Error("LocationService", $"OnLocationChanged error: {ex.Message}\n{ex.StackTrace}\nInnerException: {(ex.InnerException?.Message ?? "None")}");
+                System.Diagnostics.Debug.WriteLine($"LocationService: OnLocationChanged error: {ex.Message}");
+
             }
         }
 

@@ -1,6 +1,6 @@
-﻿using System.Net.Http;
-using System.Text.Json;
+﻿using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Locations;
 using Android.Util;
 using AviationApp.Services;
@@ -8,22 +8,23 @@ using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics.Platform;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Android.App;
-using Android.Content.PM;
-using Microsoft.Maui.Storage;
 using Microsoft.Maui.Media;
+using Microsoft.Maui.Storage;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net.Http;
 using System.Numerics;
-using Microsoft.Maui.Devices.Sensors;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace AviationApp;
 
@@ -252,9 +253,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         public string Site { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public int WindSpeed { get; set; } // Wind speed in knots
-        public int WindGust { get; set; } // Wind gusts in knots
-        public int Direction { get; set; } // Wind direction in degrees
     }
 
     private void UpdateSkullVisibility()
@@ -270,11 +268,39 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
     public bool IsUsingGpsSpeed => Preferences.Get("ManualIAS", 0f) == 0;
     public bool IsUsingIASSpeed => !(Preferences.Get("ManualIAS", 0f) == 0);
+    private bool useMetarWind = false; // Already exists
+    public bool IsUsingMetarWind
+    {
+        get => useMetarWind;
+        set
+        {
+            useMetarWind = value;
+            OnPropertyChanged();
+            System.Diagnostics.Debug.WriteLine($"MainPage: IsUsingMetarWind set to {value}");
+        }
+    }
+    private string speedSource = "Gps"; // New property to track speed source
+    public string SpeedSource
+    {
+        get => speedSource;
+        set
+        {
+            speedSource = value;
+            OnPropertyChanged();
+            System.Diagnostics.Debug.WriteLine($"MainPage: SpeedSource set to {value}");
+        }
+    }
     public string WindCorrection
     {
         get => windCorrection;
         set { windCorrection = value; OnPropertyChanged(); }
     }
+    // Initialize METAR-based wind adjustment
+    private float metarWindSpeed = 0f;
+    private float metarWindDirection = 0f;
+    private float adjustedSpeedKnots;
+    private float windComponent = 0f;
+    private string metarAirportID = "N/A";
     public MainPage(IPlatformService platformService, LocationService locationService)
     {
         // Load settings at startup
@@ -374,13 +400,15 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 Log.Error("MainPage", $"Startup TTS test failed: {ex.Message}\n{ex.StackTrace}");
             }
         });
-
+        System.Diagnostics.Debug.WriteLine("MainPage: Registering LocationMessage handler");
         WeakReferenceMessenger.Default.Register<LocationMessage>(this, async (recipient, message) =>
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"LocationMessage: Handler started, Message Time={message.UpdateTime:HH:mm:ss}");
                 if (DateTime.Now - _lastFlashUpdate < _debounceInterval)
                 {
+                    System.Diagnostics.Debug.WriteLine("LocationMessage: Skipped due to debounce");
                     return;
                 }
                 _lastFlashUpdate = DateTime.Now;
@@ -391,6 +419,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 if (androidLocation == null)
                 {
                     Log.Error("MainPage", "Received null location");
+                    System.Diagnostics.Debug.WriteLine("LocationMessage: Null location received");
                     return;
                 }
 
@@ -400,48 +429,24 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     Longitude = androidLocation.Longitude,
                     Altitude = androidLocation.HasAltitude ? androidLocation.Altitude : null,
                     Speed = androidLocation.HasSpeed ? androidLocation.Speed : null,
-                    Course = androidLocation.HasBearing ? androidLocation.Bearing : null // Heading in degrees
+                    Course = androidLocation.HasBearing ? androidLocation.Bearing : null
                 };
 
-                // Update lastLocation
                 lastLocation = location;
 
-                // Calculate GPS speed in knots
-                float gpsSpeedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444); // Convert m/s to knots
-                double currentHeading = location.Course ?? 0; // Current heading in degrees                                                              // Apply wind adjustment if ManualIAS is set and heading is available
-                float adjustedSpeedKnots;
-                float windComponent = 0f; // Initialize wind component
+                float gpsSpeedKnots = (float)(location.Speed.GetValueOrDefault() / 0.514444);
+                double currentHeading = location.Course ?? 0;
+                //float adjustedSpeedKnots;
+                //float windComponent = 0f;
 
-                if (isWindAdjustmentSet && location.Course.HasValue)
-                {
-                    // Calculate heading difference (normalized to 0-360°)
-                    double headingDiff = (currentHeading - referenceHeading + 360) % 360;
-                    // Wind component scales with cosine, flipping at 180°
-                    windComponent = windAdjustment * (float)Math.Cos(headingDiff * Math.PI / 180);
-                    adjustedSpeedKnots = gpsSpeedKnots + windComponent;
-                    WindCorrection = $"Wind {(int)Math.Round(windComponent,0)} knot {(windComponent > 0 ? "headwind" : "tailwind")}"; System.Diagnostics.Debug.WriteLine($"Adjusted speed: {adjustedSpeedKnots:F0} knots (GPS: {gpsSpeedKnots:F0}, Wind: {windComponent:F1})");
-                }
-                else
-                {
-                    adjustedSpeedKnots = gpsSpeedKnots; // Use raw GPS speed if no adjustment or no heading
-                    System.Diagnostics.Debug.WriteLine($"Using raw GPS speed: {adjustedSpeedKnots:F0} knots");
-                }
+                //// Initialize METAR-based wind adjustment
+                //float metarWindSpeed = 0f;
+                //float metarWindDirection = 0f;
+                bool isNearAirport = false; // Moved declaration
+                Airport closestAirport = null; // Moved declaration
 
-                double? altitudeFeet = location.Altitude.HasValue ? location.Altitude.Value * 3.28084 : null;
-
-                // Update UI elements with adjusted speed
-                AltitudeText = $"Altitude: {altitudeFeet?.ToString("F0") ?? "N/A"} ft";
-                SpeedText = $"{(IsUsingIASSpeed ? "IAS:" : "GPS:")} {adjustedSpeedKnots:F0} knots";
-                LastUpdateText = $"Updated: {updateTime:HH:mm:ss}";
-
-                // Track adjusted speed for acceleration
-                airspeedHistory.Add((DateTime.Now, adjustedSpeedKnots));
-                // Keep only last 5 seconds of data
-                airspeedHistory.RemoveAll(x => (DateTime.Now - x.Time).TotalSeconds > 5);
-
-                // Find closest airport
-                bool isNearAirport = false;
-                Airport closestAirport = null;
+                // Airport callout and METAR fetch
+                System.Diagnostics.Debug.WriteLine($"LocationMessage: Airports count = {airports.Count}");
                 if (airports.Any())
                 {
                     closestAirport = FindClosestAirport(location.Latitude, location.Longitude);
@@ -449,73 +454,261 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                     double distanceKm = CalculateDistance(location.Latitude, location.Longitude, closestAirport.Latitude, closestAirport.Longitude);
                     ClosestAirportText = $"Closest Airport: {closestAirport.StationId}, {(int)Math.Round(distanceKm * kmtomiles)} miles bearing {heading}° {closestAirport.Elev} feet";
                     isNearAirport = distanceKm <= AirportProximityKm;
-                    Log.Debug("MainPage", $"Closest airport: {closestAirport.StationId} Elev: {closestAirport.Elev.ToString("F0")}ft at {closestAirport.Latitude},{closestAirport.Longitude}, Distance: {distanceKm:F2} km");
-                    Log.Debug("MainPage", $"Heading to closest airport: {heading}°");
-                    if (airportCallOuts && lastStationID != closestAirport.StationId)
+                    Log.Debug("MainPage", $"Closest airport: {closestAirport.StationId} Elev: {closestAirport.Elev:F0}ft at {closestAirport.Latitude},{closestAirport.Longitude}, Distance: {distanceKm:F2} km");
+
+                    if (airportCallOuts && lastStationID != closestAirport.StationId) // TTS only when you have a new airport
                     {
                         lastStationID = closestAirport.StationId;
-                        await TextToSpeech.Default.SpeakAsync(
-                            ClosestAirportText.Replace("Closest Airport:", ""),
-                            new SpeechOptions { Volume = TTSAlertVolume });
+                        Log.Info("DMMSAlerts", $"Processing new airport: {lastStationID}");
+                        System.Diagnostics.Debug.WriteLine($"LocationMessage: Processing new airport: {lastStationID}");
+
+                        try
+                        {
+                            await TextToSpeech.Default.SpeakAsync(
+                                ClosestAirportText.Replace("Closest Airport:", ""),
+                                new SpeechOptions { Volume = TTSAlertVolume });
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("DMMSAlerts", $"TextToSpeech Error: {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"TextToSpeech Error: {ex.Message}");
+                        }
                     }
-                }
+                        // Check if METAR data is stale (older than 5 minutes)
+                        bool isMetarStale = true;
+                        if (Preferences.ContainsKey($"LastMetarFetch_{lastStationID}"))
+                        {
+                            string lastFetchTimeStr = Preferences.Get($"LastMetarFetch_{lastStationID}", null);
+                            if (DateTime.TryParse(lastFetchTimeStr, out DateTime lastFetchTime))
+                            {
+                                TimeSpan timeSinceLastFetch = DateTime.Now - lastFetchTime;
+                                isMetarStale = timeSinceLastFetch.TotalMinutes > 5; // 5-minute threshold
+                                if (isMetarStale)
+                                {
+                                    Log.Info("DMMSAlerts", $"METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
+                                }
+                            }
+                        }
 
-                float speedKmh = (float)(location.Speed.GetValueOrDefault() * 3.6);
-                Debug.WriteLine($"MainPage: Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({adjustedSpeedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
-                Log.Debug("MainPage", $"Location Update - Lat: {location.Latitude:F6}, Lon: {location.Longitude:F6}, Alt: {location.Altitude?.ToString("F1") ?? "N/A"}m ({altitudeFeet?.ToString("F1") ?? "N/A"}ft), Speed: {speedKmh:F1} km/h ({adjustedSpeedKnots:F1} knots), Time: {updateTime:HH:mm:ss}");
+                        // Fetch METAR data if no previous fetch or data is stale
+                        List<MetarData> metars = new List<MetarData>();
+                        if (!Preferences.ContainsKey($"LastMetarFetch_{lastStationID}") || isMetarStale)
+                        {
 
-                float dmmsKnots = 0f;
-                bool isDmmsValid = IsActive && float.TryParse(DmmsText, out dmmsKnots) && dmmsKnots > 0;
+                            // get metar from closest airport if not available, falls to getwinddate(location) by lat lon bbox
+                            var response = await GetWindDataByID(lastStationID);
+                            Log.Info("DMMSAlerts", $"GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
+                            System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
 
-                // Calculate adjusted stall speed using latest G-force (without wind component)
-                double gForce = CalculateGForceFromLastReading();
-                double adjustedStallSpeed = AdjustStallSpeed(gForce); // Only G-force adjustment
+                            if (response != string.Empty)
+                            {
+                                try
+                                {
+                                    metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+                                    Log.Info("DMMSAlerts", $"Deserialized {metars?.Count ?? 0} METARs for {lastStationID}");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: Deserialized {metars?.Count ?? 0} METARs for {lastStationID}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error("DMMSAlerts", $"METAR deserialization error for {lastStationID}: {ex.Message}");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR deserialization error for {lastStationID}: {ex.Message}");
+                                }
+                            }
 
-                // Update warning suppression
-                if (isDmmsValid && adjustedSpeedKnots > adjustedStallSpeed && suppressWarningsUntilAboveDmms)
-                {
-                    suppressWarningsUntilAboveDmms = false;
-                    Log.Debug("MainPage", "Speed exceeded adjusted stall speed, enabling normal alerts");
-                }
+                            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                            {
+                                var validMetar = metars
+                                    .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue)
+                                    .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
+                                    .FirstOrDefault();
+                                if (validMetar != null)
+                                {
+                                    metarWindDirection = validMetar.Wdir.Value;
+                                    metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value / 2 : 0);
+                                    metarAirportID = validMetar.IcaoId;
+                                    IsUsingMetarWind = true; // Updated to use property
+                                    Log.Info("DMMSAlerts", $"METAR Wind: Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                    System.Diagnostics.Debug.WriteLine($"METAR Wind: Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
 
-                // Calculate feet above closest airport; disable alerts if less than 10 feet
-                if (airports.Any() && altitudeFeet.HasValue && closestAirport != null)
-                {
-                    double altitudeDifference = altitudeFeet.Value - closestAirport.Elev;
-                    DisableAlerts = altitudeDifference < 10 && isNearAirport;
-                    System.Diagnostics.Debug.WriteLine($"MainPage: Altitude Difference: {altitudeDifference:F0} ft, DisableAlerts: {DisableAlerts}");
-                }
-                else
-                {
-                    DisableAlerts = false; // Enable alerts if no airport or altitude data
-                }
+                                    // Update the fetch timestamp only on successful fetch
+                                    Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
+                                }
+                                else
+                                {
+                                    Log.Warn("DMMSAlerts", $"No valid METAR data for {lastStationID}");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data for {lastStationID}");
+                                    // Reset METAR usage if no valid data
+                                    IsUsingMetarWind = false;
+                                }
+                            }
+                            else
+                            {
+                                Log.Warn("DMMSAlerts", $"No METARs or invalid data for {lastStationID}");
+                                System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs or invalid data for {lastStationID}");
 
-                // Check for acceleration plateau
-                bool isPlateau = false;
-                if (isDmmsValid && adjustedSpeedKnots > MinAlertSpeed && adjustedSpeedKnots < dmmsKnots)
-                {
-                    isPlateau = IsAccelerationPlateau();
-                    if (isPlateau)
+                                //// Fetch METAR data if no previous fetch or data is stale
+                                //if (!Preferences.ContainsKey($"LastMetarFetch_{lastStationID}") || isMetarStale)
+                                //{
+                                // Get METAR for a bound box bbox lat log's
+                                response = await GetWindData(location);
+                                System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindData response: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
+                                Log.Info("DMMSAlerts", $"GetWindData response: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
+
+                                if (!string.IsNullOrEmpty(response))
+                                {
+                                    try
+                                    {
+                                        metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+                                        Log.Info("DMMSAlerts", $"Deserialized {metars?.Count ?? 0} METARs from bbox");
+                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: Deserialized {metars?.Count ?? 0} METARs from bbox");
+                                        Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Log.Error("DMMSAlerts", $"METAR deserialization error from bbox: {ex.Message}");
+                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR deserialization error from bbox: {ex.Message}");
+                                    }
+
+                                    if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue ))
+                                    {
+                                        var validMetar = metars
+                                            .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue )
+                                            .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
+                                            .FirstOrDefault();
+                                        if (validMetar != null)
+                                        {
+                                            metarWindDirection = validMetar.Wdir.Value;
+                                            metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value/2 :  0);
+                                            metarAirportID = validMetar.IcaoId;
+                                            IsUsingMetarWind = true; // Updated to use property
+                                            Log.Info("DMMSAlerts", $"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                            System.Diagnostics.Debug.WriteLine($"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+
+                                            // Update the fetch timestamp only on successful fetch
+                                            Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
+                                        }
+                                        else
+                                        {
+                                            Log.Warn("DMMSAlerts", $"No valid METAR data from bbox");
+                                            System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data from bbox");
+                                            IsUsingMetarWind = false;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Log.Warn("DMMSAlerts", $"No METARs from bbox");
+                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs from bbox");
+                                        IsUsingMetarWind = false;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Log.Info("DMMSAlerts", $"Using existing METAR data for {lastStationID}");
+                            System.Diagnostics.Debug.WriteLine($"LocationMessage: Using existing METAR data for {lastStationID}");
+                        }
+                    
+                    // Apply wind correction: METAR overrides ManualIAS
+                    if (IsUsingMetarWind && location.Course.HasValue)
                     {
-                        Log.Debug("MainPage", $"Acceleration plateau detected at {adjustedSpeedKnots:F1} knots, below DMMS {dmmsKnots:F1}");
+                        // Calculate wind adjustment using METAR data
+                        referenceHeading = metarWindDirection; // Wind direction as reference
+                        windAdjustment = metarWindSpeed; // Wind speed in knots
+                        isWindAdjustmentSet = true;
+                        double headingDiff = (currentHeading - referenceHeading + 360) % 360;
+                        windComponent = windAdjustment * (float)Math.Cos(headingDiff * Math.PI / 180);
+                        adjustedSpeedKnots = gpsSpeedKnots + windComponent;
+                        WindCorrection = $"Wind {(int)Math.Round(windComponent, 0)} knot {(windComponent > 0 ? "headwind" : "tailwind")} ({metarAirportID} METAR)";
+                        System.Diagnostics.Debug.WriteLine($"METAR Wind Adjustment: {windAdjustment:F1} knots at {referenceHeading:F0}°, Component: {windComponent:F1}, Adjusted Speed: {adjustedSpeedKnots:F0} knots");
+                        SpeedSource = "Metar";
                     }
-                }
-
-                // Trigger alerts using adjusted speed
-                if (!DisableAlerts && isDmmsValid && adjustedSpeedKnots < adjustedStallSpeed && (isPlateau || !suppressWarningsUntilAboveDmms))
-                {
-                    if (!IsFlashing)
+                    else if (IsUsingIASSpeed && location.Course.HasValue)
                     {
-                        IsFlashing = true;
-                        ShowSkullWarning = Preferences.Get("ShowSkull", false);
-                        await StartFlashingBackground();
-                        BringAppToForeground();
-                        System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Adjusted Speed {adjustedSpeedKnots:F1} < Adjusted Stall Speed {adjustedStallSpeed:F1}, G-Force: {gForce:F2}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}, Wind Component: {windComponent:F1}");
+                        // Fallback to ManualIAS if no valid METAR
+                        float manualIAS = Preferences.Get("ManualIAS", 0f);
+                        windAdjustment = manualIAS - gpsSpeedKnots;
+                        referenceHeading = location.Course ?? 0;
+                        isWindAdjustmentSet = true;
+                        double headingDiff = (currentHeading - referenceHeading + 360) % 360;
+                        windComponent = windAdjustment * (float)Math.Cos(headingDiff * Math.PI / 180);
+                        adjustedSpeedKnots = gpsSpeedKnots + windComponent;
+                        WindCorrection = $"Wind {(int)Math.Round(windComponent, 0)} knot {(windComponent > 0 ? "headwind" : "tailwind")}";
+                        System.Diagnostics.Debug.WriteLine($"ManualIAS Adjustment: {windAdjustment:F1} knots at {referenceHeading:F0}°, Component: {windComponent:F1}, Adjusted Speed: {adjustedSpeedKnots:F0} knots");
+                        SpeedSource = "IAS";
                     }
-                }
-                else if (IsFlashing)
-                {
-                    await StopFlashingBackground();
+                    else
+                    {
+                        adjustedSpeedKnots = gpsSpeedKnots;
+                        isWindAdjustmentSet = false;
+                        WindCorrection = "Note: Stall alerts use GPS groundspeed, assuming calm winds";
+                        IsUsingMetarWind = false; // Ensure METAR wind is off
+                        System.Diagnostics.Debug.WriteLine($"Using raw GPS speed: {adjustedSpeedKnots:F0} knots");
+                        SpeedSource = "GPS";
+                    }
+
+                    // Update UI
+                    double? altitudeFeet = location.Altitude.HasValue ? location.Altitude.Value * 3.28084 : null;
+                    AltitudeText = $"Altitude: {altitudeFeet?.ToString("F0") ?? "N/A"} ft";
+                    SpeedText = $"{(IsUsingMetarWind ? "IAS (METAR):" : IsUsingIASSpeed ? "IAS:" : "GPS:")} {adjustedSpeedKnots:F0} knots";
+                    LastUpdateText = $"Updated: {updateTime:HH:mm:ss}";
+                    OnPropertyChanged(nameof(SpeedSource));
+                    OnPropertyChanged(nameof(IsUsingGpsSpeed));
+                    OnPropertyChanged(nameof(IsUsingIASSpeed));
+                    OnPropertyChanged(nameof(IsUsingMetarWind));
+                    OnPropertyChanged(nameof(WindCorrection));
+                    OnPropertyChanged(nameof(SpeedText));
+                    OnPropertyChanged(nameof(AltitudeText));
+                    OnPropertyChanged(nameof(LastUpdateText));
+                    // Track adjusted speed for acceleration
+                    airspeedHistory.Add((DateTime.Now, adjustedSpeedKnots));
+                    airspeedHistory.RemoveAll(x => (DateTime.Now - x.Time).TotalSeconds > 5);
+
+                    // Rest of your logic (acceleration, alerts, etc.) remains unchanged
+                    float dmmsKnots = 0f;
+                    bool isDmmsValid = IsActive && float.TryParse(DmmsText, out dmmsKnots) && dmmsKnots > 0;
+                    double gForce = CalculateGForceFromLastReading();
+                    double adjustedStallSpeed = AdjustStallSpeed(gForce);
+                    if (isDmmsValid && adjustedSpeedKnots > adjustedStallSpeed && suppressWarningsUntilAboveDmms)
+                    {
+                        suppressWarningsUntilAboveDmms = false;
+                        Log.Debug("MainPage", "Speed exceeded adjusted stall speed, enabling normal alerts");
+                    }
+                    if (airports.Any() && altitudeFeet.HasValue && closestAirport != null)
+                    {
+                        double altitudeDifference = altitudeFeet.Value - closestAirport.Elev;
+                        DisableAlerts = altitudeDifference < 10 && isNearAirport;
+                        System.Diagnostics.Debug.WriteLine($"MainPage: Altitude Difference: {altitudeDifference:F0} ft, DisableAlerts: {DisableAlerts}");
+                    }
+                    else
+                    {
+                        DisableAlerts = false;
+                    }
+                    bool isPlateau = false;
+                    if (isDmmsValid && adjustedSpeedKnots > MinAlertSpeed && adjustedSpeedKnots < dmmsKnots)
+                    {
+                        isPlateau = IsAccelerationPlateau();
+                        if (isPlateau)
+                        {
+                            Log.Debug("MainPage", $"Acceleration plateau detected at {adjustedSpeedKnots:F1} knots, below DMMS {dmmsKnots:F1}");
+                        }
+                    }
+                    if (!DisableAlerts && isDmmsValid && adjustedSpeedKnots < adjustedStallSpeed && (isPlateau || !suppressWarningsUntilAboveDmms))
+                    {
+                        if (!IsFlashing)
+                        {
+                            IsFlashing = true;
+                            ShowSkullWarning = Preferences.Get("ShowSkull", false);
+                            await StartFlashingBackground();
+                            BringAppToForeground();
+                            System.Diagnostics.Debug.WriteLine($"MainPage: Alerts triggered: Adjusted Speed {adjustedSpeedKnots:F1} < Adjusted Stall Speed {adjustedStallSpeed:F1}, G-Force: {gForce:F2}, Plateau: {isPlateau}, DisableAlerts: {DisableAlerts}, Wind Component: {windComponent:F1}");
+                        }
+                    }
+                    else if (IsFlashing)
+                    {
+                        await StopFlashingBackground();
+                    }
                 }
             }
             catch (Exception ex)
@@ -526,32 +719,83 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         });
     }
 
-    public static async Task<string> GetWindData(Airport airport)
+    public static async Task<string> GetWindData(Microsoft.Maui.Devices.Sensors.Location here)
     {
-        if (airport == null || double.IsNaN(airport.Latitude))
+        if (here == null || double.IsNaN(here.Latitude))
         {
-            System.Diagnostics.Debug.WriteLine("GetWindData: Invalid airport or NULL Latitude");
+            System.Diagnostics.Debug.WriteLine("GetWindData: Invalid location or NULL Latitude");
             return string.Empty;
         }
-
+        double increment = 0.05; // Smaller increment for more precise bounding box
         using var client = new HttpClient();
         try
         {
             // Use ICAO code for precise airport METAR data
-            //        var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
-            double lat1 = airport.Latitude - 0.5; // Smaller box for precision
-            double lat2 = airport.Latitude + 0.5;
-            double lon1 = airport.Longitude - 0.5;
-            double lon2 = airport.Longitude + 0.5;
-            var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lon1},{lat1},{lon2},{lat2}&format=json"); System.Diagnostics.Debug.WriteLine($"Wind Data: {response}");
-            System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
-            return response;
+            var response = ""; // Initialize response to empty array
+            for(double i = .25; i <2.0; i += increment)
+            { 
+            double lat1 = Math.Round(here.Latitude - i, 2); // Smaller box for precision
+            double lat2 = Math.Round(here.Latitude + i, 2);
+            double lon1 = Math.Round(here.Longitude - i, 2);
+            double lon2 = Math.Round(here.Longitude + i, 2);
+            System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
+            response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
+            var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
+                    System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");                
+                    return response;  
+                }
+            }        
+            return string.Empty; // Ensure we return an empty string if no valid data found
         }
         catch (HttpRequestException ex)
         {
             System.Diagnostics.Debug.WriteLine($"GetWindData Error: {ex.Message}");
             return string.Empty;
         }
+    }
+    public static async Task<string> GetWindDataByID(string airportCode)
+    {
+        if (string.IsNullOrEmpty(airportCode))
+        {
+            System.Diagnostics.Debug.WriteLine("GetWindData: Invalid ID");
+            return string.Empty;
+        }
+        using var client = new HttpClient();
+        try
+        {
+            // Use ICAO code for precise airport METAR data
+            var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
+            var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+            {
+                System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
+                System.Diagnostics.Debug.WriteLine($"Wind Data for {airportCode}: {response}");
+                System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {airportCode}");
+                return response;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetWindData Error: {ex.Message}");
+            return string.Empty;
+        }
+        return string.Empty; // Ensure we return an empty string if no valid data found
+    }
+    public record MetarData
+    {
+        [JsonPropertyName("icaoId")]
+        public string? IcaoId { get; init; }
+        [JsonPropertyName("wdir")]
+        public int? Wdir { get; init; }
+        [JsonPropertyName("wspd")]
+        public int? Wspd { get; init; }
+        [JsonPropertyName("wgst")]
+        public int? Wgst { get; init; }
+        [JsonPropertyName("receiptTime")]
+        public string ReceiptTime { get; init; }
     }
     public class ManualIASChangedMessage
     {
@@ -568,7 +812,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             _lastZ = data.Z;
             double gForce = CalculateGForce(data.X, data.Y, data.Z);
             double adjustedStallSpeed = AdjustStallSpeed(gForce);
-            System.Diagnostics.Debug.WriteLine($"MainPage:OnAccelerometerReadingChanged Updated adjustedStallSpeed to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
+            // System.Diagnostics.Debug.WriteLine($"MainPage:OnAccelerometerReadingChanged Updated adjustedStallSpeed to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -585,10 +829,10 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     {
         double totalAcceleration = Math.Sqrt(x * x + y * y + z * z);
         double gForce = totalAcceleration / 9.81;
-        System.Diagnostics.Debug.WriteLine($"MainPage: Raw G-Force: {gForce:F2}, X: {x:F2}, Y: {y:F2}, Z: {z:F2}, TotalAccel: {totalAcceleration:F2} m/s²");
+        //System.Diagnostics.Debug.WriteLine($"MainPage: Raw G-Force: {gForce:F2}, X: {x:F2}, Y: {y:F2}, Z: {z:F2}, TotalAccel: {totalAcceleration:F2} m/s²");
         if (totalAcceleration < 8.0) // Below expected gravity (~9.81 m/s²)
         {
-            System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid acceleration, assuming 1G");
+            // System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid acceleration, assuming 1G");
             return 1.0;
         }
         return gForce;
@@ -606,7 +850,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         System.Diagnostics.Debug.WriteLine($"MainPage: Last G-Force: {gForce:F2}, X: {_lastX:F2}, Y: {_lastY:F2}, Z: {_lastZ:F2}, TotalAccel: {totalAcceleration:F2} m/s²");
         if (totalAcceleration < 8.0) // Below expected gravity
         {
-            System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid last acceleration, assuming 1G");
+            //System.Diagnostics.Debug.WriteLine("MainPage: Low or invalid last acceleration, assuming 1G");
             return 1.0;
         }
         return gForce;
@@ -847,12 +1091,13 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 }
             }
             Log.Debug("MainPage", $"Loaded {airports.Count} airports from Stations.csv");
+            System.Diagnostics.Debug.WriteLine($"LoadAirportsAsync: Loaded {airports.Count} airports");
         }
         catch (Exception ex)
         {
             Log.Error("MainPage", $"Failed to load airports: {ex.Message}\n{ex.StackTrace}");
             ClosestAirportText = "Closest Airport: Error loading data";
-            //ClosestAirportElev = 0; // Reset elevation on error
+            System.Diagnostics.Debug.WriteLine($"LoadAirportsAsync: Error - {ex.Message}");
         }
     }
 
@@ -1308,7 +1553,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     {
         base.OnAppearing();
         ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f);
-
+        Preferences.Remove($"LastMetarFetch_{lastStationID}"); // delete any METAR data.
         // Reload settings live
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
