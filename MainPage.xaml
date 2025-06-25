@@ -120,7 +120,21 @@
                        SemanticProperties.HeadingLevel="Level1" />
 
                 <!-- DMMS Entry -->
-                <Entry Placeholder="Enter DMMS (knots)"
+                <Picker x:Name="DmmsPicker"
+                        SelectedItem="{Binding DmmsText}"
+                        FontFamily="OpenSansRegular"
+                        FontAttributes="Bold"
+                        FontSize="24"
+                        TextColor="{StaticResource White}"
+                        HorizontalOptions="Center"
+                        BackgroundColor="{StaticResource Primary}"
+                        Opacity="1" 
+                        WidthRequest="200"
+                        HeightRequest="50"
+                        Margin="0,10,0,0"
+                        ItemsSource="{Binding SpeedRange}"
+                        SelectedIndex="69" />
+                    <!--<Entry Placeholder="Enter DMMS (knots)"
                        Keyboard="Numeric"
                        Text="{Binding DmmsText}"
                        FontFamily="OpenSansRegular"
@@ -133,7 +147,7 @@
                        Opacity="0.5"
                        WidthRequest="200"
                        HeightRequest="50"
-                       Margin="0,10,0,0" />
+                       Margin="0,10,0,0" />-->
 
                 <!-- Knots Label -->
                 <Label Text="(KNOTS)"

@@ -15,6 +15,7 @@ using Microsoft.Maui.Media;
 using Microsoft.Maui.Storage;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -95,7 +96,9 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private float windAdjustment = 0f; // Wind effect in knots (ManualIAS - GPS speed)
     private double referenceHeading = 0.0; // Heading when ManualIAS was set (degrees)
     private bool isWindAdjustmentSet = false; // Flag to enable wind adjustment
-
+                                              // Picker for DMMS 
+    public ObservableCollection<string> SpeedRange { get; set; } = 
+        new ObservableCollection<string>(Enumerable.Range(1, 270).Select(i => i.ToString()));
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
