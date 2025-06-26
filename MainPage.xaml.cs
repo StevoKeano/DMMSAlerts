@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 namespace AviationApp;
 
 
-public enum ButtonState { Active, Paused, Failed, PermissionRequired}
+public enum ButtonState { Active, Paused, Failed, PermissionRequired }
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class MainPage : ContentPage, INotifyPropertyChanged
 {
@@ -41,7 +41,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private string longitudeText = "Longitude: N/A";
     private string altitudeText = "Altitude: N/A";
     private string speedText = "Speed: N/A";
-    private string lastUpdateText = "Last Update: N/A";    
+    private string lastUpdateText = "Last Update: N/A";
     private string warningLabelText;
     private bool isActive = false;
     private ButtonState buttonState = ButtonState.PermissionRequired;
@@ -91,7 +91,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private double referenceHeading = 0.0; // Heading when ManualIAS was set (degrees)
     private bool isWindAdjustmentSet = false; // Flag to enable wind adjustment
                                               // Picker for DMMS 
-    //public ObservableCollection<string> SpeedRange { get; set; }
+                                              //public ObservableCollection<string> SpeedRange { get; set; }
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
@@ -219,9 +219,9 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     public ButtonState ButtonState
     {
         get => buttonState;
-        set 
-        { 
-            buttonState = value; 
+        set
+        {
+            buttonState = value;
             OnPropertyChanged();
             System.Diagnostics.Debug.WriteLine($"MainPage: CounterBtn state set to {value}");
         }
@@ -268,15 +268,15 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         set { disableAlerts = value; OnPropertyChanged(); }
     }
 
-    public bool AirportCallOuts 
-    { 
-        get => airportCallOuts; 
-        set { airportCallOuts = value; OnPropertyChanged(); } 
+    public bool AirportCallOuts
+    {
+        get => airportCallOuts;
+        set { airportCallOuts = value; OnPropertyChanged(); }
     }
 
     private class Airport
     {
-        public string StationId { get; set; }       
+        public string StationId { get; set; }
         public int Elev { get; set; }
         public string Site { get; set; }
         public double Latitude { get; set; }
@@ -329,6 +329,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private float adjustedSpeedKnots;
     private float windComponent = 0f;
     private string metarAirportID = "N/A";
+
+    private readonly SemaphoreSlim _metarFetchSemaphore = new SemaphoreSlim(1, 1);
     public MainPage(IPlatformService platformService, LocationService locationService)
     {
         // Load settings at startup
@@ -339,7 +341,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         LoadSettings(); // Safe settings load 
         // Fix: Use _dmmsText instead of dmmsText
         double.TryParse(_dmmsText, out _zeroGStallSpeed);
-     
+
         airportCallOuts = Preferences.Get("AirportCallOuts", true);
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
@@ -522,33 +524,34 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                             System.Diagnostics.Debug.WriteLine($"TextToSpeech Error: {ex.Message}");
                         }
                     }
-                        // Check if METAR data is stale (older than 5 minutes)
-                        bool isMetarStale = true;
-                        if (Preferences.ContainsKey($"LastMetarFetch_{lastStationID}"))
+                    // Check if METAR data is stale (older than 5 minutes)
+                    bool isMetarStale = true;
+                    if (Preferences.ContainsKey($"LastMetarFetch_{lastStationID}"))
+                    {
+                        string lastFetchTimeStr = Preferences.Get($"LastMetarFetch_{lastStationID}", null);
+                        if (DateTime.TryParse(lastFetchTimeStr, out DateTime lastFetchTime))
                         {
-                            string lastFetchTimeStr = Preferences.Get($"LastMetarFetch_{lastStationID}", null);
-                            if (DateTime.TryParse(lastFetchTimeStr, out DateTime lastFetchTime))
+                            TimeSpan timeSinceLastFetch = DateTime.Now - lastFetchTime;
+                            isMetarStale = timeSinceLastFetch.TotalMinutes > 5; // 5-minute threshold
+                            if (isMetarStale)
                             {
-                                TimeSpan timeSinceLastFetch = DateTime.Now - lastFetchTime;
-                                isMetarStale = timeSinceLastFetch.TotalMinutes > 5; // 5-minute threshold
-                                if (isMetarStale)
-                                {
-                                    Log.Info("DMMSAlerts", $"METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
-                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
-                                }
+                                Log.Info("DMMSAlerts", $"METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
+                                System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR data for {lastStationID} is stale (last fetched {timeSinceLastFetch.TotalMinutes:F1} minutes ago), refetching");
                             }
                         }
+                    }
 
-                        // Fetch METAR data if no previous fetch or data is stale
-                        List<MetarData> metars = new List<MetarData>();
-                        if (!Preferences.ContainsKey($"LastMetarFetch_{lastStationID}") || isMetarStale)
+                    // Fetch METAR data if no previous fetch or data is stale
+                    List<MetarData> metars = new List<MetarData>();
+                    if (!Preferences.ContainsKey($"LastMetarFetch_{lastStationID}") || isMetarStale)
+                    {
+                        await _metarFetchSemaphore.WaitAsync();
+                        try
                         {
-
-                            // get metar from closest airport if not available, falls to getwinddate(location) by lat lon bbox
+                            // Fetch METAR data for the closest airport
                             var response = await GetWindDataByID(lastStationID);
                             Log.Info("DMMSAlerts", $"GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
                             System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
-
                             if (response != string.Empty)
                             {
                                 try
@@ -564,31 +567,55 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                 }
                             }
 
-                        MetarData validMetar = null;
-                        // New: Select nearest METAR if multiple received
-                        if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
-                        {
-                            var validMetars = metars
-                                .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
-                                                        .ToList();
-                            var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
-                            validMetar = validMetars
-                                                        .Where(m => airportCoords.ContainsKey(m.IcaoId))
-                                                        .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
-                                                        .FirstOrDefault();
-                        }
-                        // Fallback to any valid METAR if none within 60 minutes
-                        if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
-                        {
-                               validMetar = metars
-                                    .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
-                                    .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
-                                    .FirstOrDefault();
+                            // get metar from closest airport if not available, falls to getwinddate(location) by lat lon bbox
+                            response = await GetWindDataByID(lastStationID);
+                            Log.Info("DMMSAlerts", $"GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
+                            System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindDataByID response for {lastStationID}: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
+                            System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindDataByID raw response: {response}");
+                            if (response != string.Empty)
+                            {
+                                try
+                                {
+                                    metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+                                    Log.Info("DMMSAlerts", $"Deserialized {metars?.Count ?? 0} METARs for {lastStationID}");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: Deserialized {metars?.Count ?? 0} METARs for {lastStationID}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error("DMMSAlerts", $"METAR deserialization error for {lastStationID}: {ex.Message}");
+                                    System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR deserialization error for {lastStationID}: {ex.Message}");
+                                }
+                            }
+
+                            MetarData validMetar = null;
+                            // New: Select nearest METAR if multiple received, younger than 60 minutes, and valid Wdir/Wspd
+                            if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
+                            {
+                                var validMetars = metars
+                                    .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                                            .ToList();
+                                var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
+                                validMetar = validMetars
+                                                            .Where(m => airportCoords.ContainsKey(m.IcaoId))
+                                                            .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
+                                                            .FirstOrDefault();
+                            }
+                            // only use StationID METAR if Wdir is int, and it's valid of course
+                            if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
+                            {
+                                validMetar = metars
+                                     .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
+                                     .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
+                                     .FirstOrDefault();
                                 if (validMetar != null)
                                 {
                                     int.TryParse(validMetar.Wdir, out var wdir);
                                     metarWindDirection = wdir;
-                                    metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value / 2 : 0);
+                                    metarWindSpeed = validMetar.Wspd.Value;
+                                    if (validMetar.Wgst.HasValue && validMetar.Wgst.Value > validMetar.Wspd.Value)
+                                    {
+                                        metarWindSpeed += (validMetar.Wgst.Value - validMetar.Wspd.Value) / 2;
+                                    }
                                     metarAirportID = validMetar.IcaoId;
                                     IsUsingMetarWind = true; // Updated to use property
                                     Log.Info("DMMSAlerts", $"METAR Wind: Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
@@ -604,8 +631,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                     // Reset METAR usage if no valid data
                                     IsUsingMetarWind = false;
                                 }
-                            }
-                            else
+                            }// end of stationID Metar processing.
+                            else // try bbox
                             {
                                 Log.Warn("DMMSAlerts", $"No METARs or invalid data for {lastStationID}");
                                 System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs or invalid data for {lastStationID}");
@@ -615,7 +642,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                 response = await GetWindData(location);
                                 System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindData response: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
                                 Log.Info("DMMSAlerts", $"GetWindData response: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
-
+                                System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindData raw response: {response}");
                                 if (!string.IsNullOrEmpty(response))
                                 {
                                     try
@@ -630,39 +657,58 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                         Log.Error("DMMSAlerts", $"METAR deserialization error from bbox: {ex.Message}");
                                         System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR deserialization error from bbox: {ex.Message}");
                                     }
-                                validMetar = null;
-                                // New: Select nearest METAR if multiple received
-                                if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
-                                {
-                                    var validMetars = metars
-                                             .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
-                                            .ToList();
-                                    var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
-                                    validMetar = validMetars
-                                            .Where(m => airportCoords.ContainsKey(m.IcaoId))
-                                            .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
-                                            .FirstOrDefault();
+                                    validMetar = null;
+                                    // New: Select nearest METAR if multiple received
+                                    if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
+                                    {
+                                        var validMetars = metars
+                                                 .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                                .ToList();
+                                        var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
+                                        validMetar = validMetars
+                                                .Where(m => airportCoords.ContainsKey(m.IcaoId))
+                                                .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
+                                                .FirstOrDefault();
                                     }
-                                // Fallback to any valid METAR if none within 60 minutes
-                                if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
-
-                                {
-                                    validMetar = metars                                            
-                                             .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
+                                    // Fallback to any valid METAR if none within 60 minutes
+                                    if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
+                                    {
+                                        validMetar = metars
+                                            .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
                                             .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
                                             .FirstOrDefault();
-                                        if (validMetar != null)
+                                    }
+                                    else
+                                    {
+                                        Log.Warn("DMMSAlerts", $"No METARs from bbox");
+                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs from bbox");
+                                        IsUsingMetarWind = false;
+                                    }
+                                    if (validMetar != null)
                                         {
-                                            int.TryParse(validMetar.Wdir, out var wdir);
-                                            metarWindDirection = wdir;
-                                            metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value/2 :  0);
-                                            metarAirportID = validMetar.IcaoId;
-                                            IsUsingMetarWind = true; // Updated to use property
-                                            Log.Info("DMMSAlerts", $"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
-                                            System.Diagnostics.Debug.WriteLine($"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                            if (int.TryParse(validMetar.Wdir, out var wdir) && wdir >= 0 && wdir <= 360)
+                                            {
+                                                metarWindDirection = wdir;
+                                                metarWindSpeed = validMetar.Wspd.Value;
+                                                if (validMetar.Wgst.HasValue && validMetar.Wgst.Value > validMetar.Wspd.Value)
+                                                {
+                                                    metarWindSpeed += (validMetar.Wgst.Value - validMetar.Wspd.Value) / 2;
+                                                }
+                                                metarAirportID = validMetar.IcaoId;
+                                                IsUsingMetarWind = true; // Updated to use property
+                                                Log.Info("DMMSAlerts", $"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                                System.Diagnostics.Debug.WriteLine($"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
 
-                                            // Update the fetch timestamp only on successful fetch
-                                            Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
+                                                // Update the fetch timestamp only on successful fetch
+                                                Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
+                                            }
+                                            else
+                                            {
+                                                Log.Warn("DMMSAlerts", $"Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
+                                                System.Diagnostics.Debug.WriteLine($"LocationMessage: Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
+                                                validMetar = null;
+                                                IsUsingMetarWind = false;
+                                            }
                                         }
                                         else
                                         {
@@ -670,22 +716,21 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                             System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data from bbox");
                                             IsUsingMetarWind = false;
                                         }
-                                }
-                                else
-                                {
-                                        Log.Warn("DMMSAlerts", $"No METARs from bbox");
-                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs from bbox");
-                                        IsUsingMetarWind = false;
-                                }
+
                                 }
                             }
                         }
-                        else
+                        finally
                         {
-                            Log.Info("DMMSAlerts", $"Using existing METAR data for {lastStationID}");
-                            System.Diagnostics.Debug.WriteLine($"LocationMessage: Using existing METAR data for {lastStationID}");
+                            _metarFetchSemaphore.Release();
                         }
-                    
+                    }
+                    else
+                    {
+                        Log.Info("DMMSAlerts", $"Using existing METAR data for {lastStationID}");
+                        System.Diagnostics.Debug.WriteLine($"LocationMessage: Using existing METAR data for {lastStationID}");
+                    }
+
                     // Apply wind correction: METAR overrides ManualIAS
                     if (IsUsingMetarWind && location.Course.HasValue)
                     {
@@ -794,7 +839,69 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             }
         });
     }
+    private static HttpClient CreateHttpClient()
+    {
+        var handler = new HttpClientHandler();
+        try
+        {
+            handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("DMMSAlerts", $"SSL Protocol setup failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"SSL Protocol setup failed: {ex.Message}");
+        }
+        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+    }
+    protected override void OnNavigatedTo(NavigatedToEventArgs args)
+    {
+        base.OnNavigatedTo(args);
 
+        var picker = this.FindByName<Picker>("DmmsPicker");
+        if (picker != null && SpeedRange != null && SpeedRange.Any() && !string.IsNullOrEmpty(_dmmsText))
+        {
+            System.Diagnostics.Debug.WriteLine($"MainPage: SpeedRange = [{string.Join(", ", SpeedRange.Take(10))}...]");
+            var selectedItem = SpeedRange.FirstOrDefault(item => string.Equals(item?.Trim(), _dmmsText?.Trim(), StringComparison.Ordinal));
+            if (selectedItem != null)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    // Store current ItemsSource
+                    var originalItemsSource = picker.ItemsSource;
+                    // Clear binding and ItemsSource to reset Picker state
+                    picker.ClearValue(Picker.SelectedItemProperty);
+                    picker.ItemsSource = null;
+                    // Set SelectedIndex
+                    var index = SpeedRange.IndexOf(selectedItem);
+                    if (index >= 0)
+                    {
+                        picker.SelectedIndex = index;
+                    }
+                    // Restore ItemsSource and binding
+                    picker.ItemsSource = originalItemsSource;
+                    picker.SetBinding(Picker.SelectedItemProperty, new Binding(nameof(DmmsText), BindingMode.TwoWay));
+                    // Sync DmmsText if needed
+                    if (_dmmsText != selectedItem)
+                    {
+                        DmmsText = selectedItem; // Triggers setter for Preferences and UI
+                    }
+                    System.Diagnostics.Debug.WriteLine($"OnNavigatedTo: Set DmmsPicker.SelectedIndex to {index}, SelectedItem to {picker.SelectedItem}, DmmsText: {_dmmsText}");
+                });
+            }
+            else
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    picker.SelectedIndex = -1; // Clear selection
+                    System.Diagnostics.Debug.WriteLine($"OnNavigatedTo: DmmsText '{_dmmsText}' not found in SpeedRange, cleared selection");
+                });
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"OnNavigatedTo: Picker or SpeedRange invalid (Picker: {picker != null}, SpeedRange: {SpeedRange?.Count ?? 0}, DmmsText: {_dmmsText})");
+        }
+    }
     public static async Task<string> GetWindData(Microsoft.Maui.Devices.Sensors.Location here)
     {
         if (here == null || double.IsNaN(here.Latitude))
@@ -803,28 +910,28 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             return string.Empty;
         }
         double increment = 0.05; // Smaller increment for more precise bounding box
-        using var client = new HttpClient();
+        using var client = new CreateHttpClient();
         try
         {
             // Use ICAO code for precise airport METAR data
             var response = ""; // Initialize response to empty array
-            for(double i = .25; i <2.0; i += increment)
-            { 
-            double lat1 = Math.Round(here.Latitude - i, 2); // Smaller box for precision
-            double lat2 = Math.Round(here.Latitude + i, 2);
-            double lon1 = Math.Round(here.Longitude - i, 2);
-            double lon2 = Math.Round(here.Longitude + i, 2);
-            System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
-            response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
-            var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
+            for (double i = .25; i < 2.0; i += increment)
+            {
+                double lat1 = Math.Round(here.Latitude - i, 2); // Smaller box for precision
+                double lat2 = Math.Round(here.Latitude + i, 2);
+                double lon1 = Math.Round(here.Longitude - i, 2);
+                double lon2 = Math.Round(here.Longitude + i, 2);
+                System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
+                response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
+                var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
                 if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
 
                 {
                     System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
-                    System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");                
-                    return response;  
+                    System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");
+                    return response;
                 }
-            }        
+            }
             return string.Empty; // Ensure we return an empty string if no valid data found
         }
         catch (HttpRequestException ex)
@@ -1236,7 +1343,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
     private async void OnOptionsClicked(object sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("Options button clicked"); 
+        System.Diagnostics.Debug.WriteLine("Options button clicked");
         await Navigation.PushAsync(new OptionsPage());
     }
 
@@ -1320,7 +1427,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
         SemanticScreenReader.Announce(CounterBtn.Text);
     }
-   
+
     private async Task UpdateCounterBtnState()
     {
 
@@ -1518,7 +1625,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             {
                 await TextToSpeech.Default.SpeakAsync(
                     ttsAlertText,
-                    new SpeechOptions { Volume = TTSAlertVolume},
+                    new SpeechOptions { Volume = TTSAlertVolume },
                     ttsToken);
                 System.Diagnostics.Debug.WriteLine("MainPage: TTS: Initial message played at maximum volume");
                 while (!ttsToken.IsCancellationRequested)
@@ -1600,7 +1707,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 });
                 return;
             }
-            else if(WarningLabelText == "Please allow 'ALL THE TIME' in settings by clicking button below.")
+            else if (WarningLabelText == "Please allow 'ALL THE TIME' in settings by clicking button below.")
             {
                 WarningLabelText = "< DMMS Alerter <";
             }

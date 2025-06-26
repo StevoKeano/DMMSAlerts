@@ -60,6 +60,8 @@
 	  <AndroidUseAapt2>True</AndroidUseAapt2>
 	  <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
 	  <AndroidPackageFormat>aab</AndroidPackageFormat>
+	  <ApplicationDisplayVersion>1.4.7</ApplicationDisplayVersion>
+	  <ApplicationVersion>7</ApplicationVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<UseAot>false</UseAot>
@@ -82,17 +84,10 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>	
 	<ItemGroup>
-	  <AndroidResource Remove="Platforms\Android\Resources\NewFolder1\**" />
-	  <Compile Remove="Platforms\Android\Resources\NewFolder1\**" />
-	  <EmbeddedResource Remove="Platforms\Android\Resources\NewFolder1\**" />
-	  <MauiCss Remove="Platforms\Android\Resources\NewFolder1\**" />
-	  <MauiXaml Remove="Platforms\Android\Resources\NewFolder1\**" />
-	  <None Remove="Platforms\Android\Resources\NewFolder1\**" />
-	</ItemGroup>	
-	<ItemGroup>
 	  <AndroidResource Remove="Platforms\Android\Resources\raw\stallhorn.m4a" />
 	</ItemGroup>	
 	<ItemGroup>
+	  <None Remove="Platforms\Android\Resources\network_security_config.xml" />
 	  <None Remove="Platforms\Android\Resources\raw\stallhorn.m4a" />
 	  <None Remove="Resources\drawable\skull_crossbones_notification.png" />
 	</ItemGroup>	
@@ -112,6 +107,8 @@
 	  <AndroidUseAapt2>True</AndroidUseAapt2>
 	  <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
 	  <AndroidPackageFormat>aab</AndroidPackageFormat>
+	  <ApplicationDisplayVersion>1.4.7</ApplicationDisplayVersion>
+	  <ApplicationVersion>7</ApplicationVersion>
 	</PropertyGroup>	
 <ItemGroup>
    	<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -126,6 +123,7 @@
 	<Reference Include="Mono.Android" />	
 </ItemGroup>
 <ItemGroup>
+  <Folder Include="Platforms\Android\Resources\NewFolder1\" />
   <Folder Include="Platforms\Android\Resources\NewFolder\" />
 </ItemGroup>
 </Project>

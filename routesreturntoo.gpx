@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Grok">
+  <trk>
+    <trkseg>
+      <!-- Downwind: 350° magnetic (353° true), 90 to 50 knots, 2630 to 2297 ft MSL -->
+      <trkpt lat="30.476700" lon="-98.081070">
+        <ele>801.624</ele> <!-- 2630 ft -->
+        <speed>46.2963</speed> <!-- 90 knots -->
+        <time>2025-05-22T18:58:00Z</time>
+      </trkpt>
+      <trkpt lat="30.477898" lon="-98.081208">
+        <ele>799.085</ele> <!-- 2621.67 ft -->
+        <speed>45.7819</speed> <!-- 89 knots -->
+        <time>2025-05-22T18:58:01Z</time>
+      </trkpt>
+      <trkpt lat="30.479095" lon="-98.081346">
+        <ele>796.546</ele> <!-- 2613.34 ft -->
+        <speed>45.2674</speed> <!-- 88 knots -->
+        <time>2025-05-22T18:58:02Z</time>
+      </trkpt>
+      <trkpt lat="30.480291" lon="-98.081483">
+        <ele>794.007</ele> <!-- 2605.01 ft -->
+        <speed>44.7530</speed> <!-- 87 knots -->
+        <time>2025-05-22T18:58:03Z</time>
+      </trkpt>
+      <trkpt lat="30.481486" lon="-98.081620">
+        <ele>791.468</ele> <!-- 2596.68 ft -->
+        <speed>44.2386</speed> <!-- 86 knots -->
+        <time>2025-05-22T18:58:04Z</time>
+      </trkpt>
+      <trkpt lat="30.482680" lon="-98.081756">
+        <ele>788.929</ele> <!-- 2588.35 ft -->
+        <speed>43.7241</speed> <!-- 85 knots -->
+        <time>2025-05-22T18:58:05Z</time>
+      </trkpt>
+      <trkpt lat="30.483873" lon="-98.081892">
+        <ele>786.390</ele> <!-- 2580.02 ft -->
+        <speed>43.2097</speed> <!-- 84 knots -->
+        <time>2025-05-22T18:58:06Z</time>
+      </trkpt>
+      <trkpt lat="30.485065" lon="-98.082027">
+        <ele>783.851</ele> <!-- 2571.69 ft -->
+        <speed>42.6953</speed> <!-- 83 knots -->
+        <time>2025-05-22T18:58:07Z</time>
+      </trkpt>
+      <trkpt lat="30.486256" lon="-98.082162">
+        <ele>781.312</ele> <!-- 2563.36 ft -->
+        <speed>42.1808</speed> <!-- 82 knots -->
+        <time>2025-05-22T18:58:08Z</time>
+      </trkpt>
+      <trkpt lat="30.487446" lon="-98.082297">
+        <ele>778.773</ele> <!-- 2555.03 ft -->
+        <speed>41.6664</speed> <!-- 81 knots -->
+        <time>2025-05-22T18:58:09Z</time>
+      </trkpt>
+      <trkpt lat="30.488635" lon="-98.082431">
+        <ele>776.234</ele> <!-- 2546.70 ft -->
+        <speed>41.1520</speed> <!-- 80 knots -->
+        <time>2025-05-22T18:58:10Z</time>
+      </trkpt>
+      <trkpt lat="30.489823" lon="-98.082565">
+        <ele>773.695</ele> <!-- 2538.37 ft -->
+        <speed>40.6375</speed> <!-- 79 knots -->
+        <time>2025-05-22T18:58:11Z</time>
+      </trkpt>
+      <trkpt lat="30.491010" lon="-98.082698">
+        <ele>771.156</ele> <!-- 2530.04 ft -->
+        <speed>40.1231</speed> <!-- 78 knots -->
+        <time>2025-05-22T18:58:12Z</time>
+      </trkpt>
+      <trkpt lat="30.492196" lon="-98.082831">
+        <ele>768.617</ele> <!-- 2521.71 ft -->
+        <speed>39.6087</speed> <!-- 77 knots -->
+        <time>2025-05-22T18:58:13Z</time>
+      </trkpt>
+      <trkpt lat="30.493381" lon="-98.082963">
+        <ele>766.078</ele> <!-- 2513.38 ft -->
+        <speed>39.0942</speed> <!-- 76 knots -->
+        <time>2025-05-22T18:58:14Z</time>
+      </trkpt>
+      <trkpt lat="30.494565" lon="-98.083095">
+        <ele>763.539</ele> <!-- 2505.05 ft -->
+        <speed>38.5798</speed> <!-- 75 knots -->
+        <time>2025-05-22T18:58:15Z</time>
+      </trkpt>
+      <trkpt lat="30.495748" lon="-98.083226">
+        <ele>761.000</ele> <!-- 2496.72 ft -->
+        <speed>38.0654</speed> <!-- 74 knots -->
+        <time>2025-05-22T18:58:16Z</time>
+      </trkpt>
+      <trkpt lat="30.496930" lon="-98.083357">
+        <ele>758.461</ele> <!-- 2488.39 ft -->
+        <speed>37.5509</speed> <!-- 73 knots -->
+        <time>2025-05-22T18:58:17Z</time>
+      </trkpt>
+      <trkpt lat="30.498111" lon="-98.083487">
+        <ele>755.922</ele> <!-- 2480.06 ft -->
+        <speed>37.0365</speed> <!-- 72 knots -->
+        <time>2025-05-22T18:58:18Z</time>
+      </trkpt>
+      <trkpt lat="30.499291" lon="-98.083617">
+        <ele>753.383</ele> <!-- 2471.73 ft -->
+        <speed>36.5221</speed> <!-- 71 knots -->
+        <time>2025-05-22T18:58:19Z</time>
+      </trkpt>
+      <trkpt lat="30.500470" lon="-98.083746">
+        <ele>750.844</ele> <!-- 2463.40 ft -->
+        <speed>36.0076</speed> <!-- 70 knots -->
+        <time>2025-05-22T18:58:20Z</time>
+      </trkpt>
+      <trkpt lat="30.501648" lon="-98.083875">
+        <ele>748.305</ele> <!-- 2455.07 ft -->
+        <speed>35.4932</speed> <!-- 69 knots -->
+        <time>2025-05-22T18:58:21Z</time>
+      </trkpt>
+      <trkpt lat="30.502825" lon="-98.084004">
+        <ele>745.766</ele> <!-- 2446.74 ft -->
+        <speed>34.9788</speed> <!-- 68 knots -->
+        <time>2025-05-22T18:58:22Z</time>
+      </trkpt>
+      <trkpt lat="30.504001" lon="-98.084132">
+        <ele>743.227</ele> <!-- 2438.41 ft -->
+        <speed>34.4643</speed> <!-- 67 knots -->
+        <time>2025-05-22T18:58:23Z</time>
+      </trkpt>
+      <trkpt lat="30.505176" lon="-98.084260">
+        <ele>740.688</ele> <!-- 2430.08 ft -->
+        <speed>33.9499</speed> <!-- 66 knots -->
+        <time>2025-05-22T18:58:24Z</time>
+      </trkpt>
+      <trkpt lat="30.506350" lon="-98.084387">
+        <ele>738.149</ele> <!-- 2421.75 ft -->
+        <speed>33.4355</speed> <!-- 65 knots -->
+        <time>2025-05-22T18:58:25Z</time>
+      </trkpt>
+      <trkpt lat="30.507523" lon="-98.084514">
+        <ele>735.610</ele> <!-- 2413.42 ft -->
+        <speed>32.9210</speed> <!-- 64 knots -->
+        <time>2025-05-22T18:58:26Z</time>
+      </trkpt>
+      <trkpt lat="30.508695" lon="-98.084640">
+        <ele>733.071</ele> <!-- 2405.09 ft -->
+        <speed>32.4066</speed> <!-- 63 knots -->
+        <time>2025-05-22T18:58:27Z</time>
+      </trkpt>
+      <trkpt lat="30.509866" lon="-98.084766">
+        <ele>730.532</ele> <!-- 2396.76 ft -->
+        <speed>31.8922</speed> <!-- 62 knots -->
+        <time>2025-05-22T18:58:28Z</time>
+      </trkpt>
+      <trkpt lat="30.511036" lon="-98.084892">
+        <ele>727.993</ele> <!-- 2388.43 ft -->
+        <speed>31.3777</speed> <!-- 61 knots -->
+        <time>2025-05-22T18:58:29Z</time>
+      </trkpt>
+      <trkpt lat="30.512205" lon="-98.085017">
+        <ele>725.454</ele> <!-- 2380.10 ft -->
+        <speed>30.8633</speed> <!-- 60 knots -->
+        <time>2025-05-22T18:58:30Z</time>
+      </trkpt>
+      <trkpt lat="30.513373" lon="-98.085142">
+        <ele>722.915</ele> <!-- 2371.77 ft -->
+        <speed>30.3489</speed> <!-- 59 knots -->
+        <time>2025-05-22T18:58:31Z</time>
+      </trkpt>
+      <trkpt lat="30.514540" lon="-98.085266">
+        <ele>720.376</ele> <!-- 2363.44 ft -->
+        <speed>29.8344</speed> <!-- 58 knots -->
+        <time>2025-05-22T18:58:32Z</time>
+      </trkpt>
+      <trkpt lat="30.515706" lon="-98.085390">
+        <ele>717.837</ele> <!-- 2355.11 ft -->
+        <speed>29.3200</speed> <!-- 57 knots -->
+        <time>2025-05-22T18:58:33Z</time>
+      </trkpt>
+      <trkpt lat="30.516871" lon="-98.085514">
+        <ele>715.298</ele> <!-- 2346.78 ft -->
+        <speed>28.8056</speed> <!-- 56 knots -->
+        <time>2025-05-22T18:58:34Z</time>
+      </trkpt>
+      <trkpt lat="30.518035" lon="-98.085637">
+        <ele>712.759</ele> <!-- 2338.45 ft -->
+        <speed>28.2911</speed> <!-- 55 knots -->
+        <time>2025-05-22T18:58:35Z</time>
+      </trkpt>
+      <trkpt lat="30.519198" lon="-98.085760">
+        <ele>710.220</ele> <!-- 2330.12 ft -->
+        <speed>27.7767</speed> <!-- 54 knots -->
+        <time>2025-05-22T18:58:36Z</time>
+      </trkpt>
+      <trkpt lat="30.520360" lon="-98.085882">
+        <ele>707.681</ele> <!-- 2321.79 ft -->
+        <speed>27.2623</speed> <!-- 53 knots -->
+        <time>2025-05-22T18:58:37Z</time>
+      </trkpt>
+      <trkpt lat="30.521521" lon="-98.086004">
+        <ele>705.142</ele> <!-- 2313.46 ft -->
+        <speed>26.7478</speed> <!-- 52 knots -->
+        <time>2025-05-22T18:58:38Z</time>
+      </trkpt>
+      <trkpt lat="30.522681" lon="-98.086126">
+        <ele>702.603</ele> <!-- 2305.13 ft -->
+        <speed>26.2334</speed> <!-- 51 knots -->
+        <time>2025-05-22T18:58:39Z</time>
+      </trkpt>
+      <trkpt lat="30.523840" lon="-98.086247">
+        <ele>700.126</ele> <!-- 2297 ft -->
+        <speed>25.7222</speed> <!-- 50 knots -->
+        <time>2025-05-22T18:58:40Z</time>
+      </trkpt>
+      <!-- Speed Increase: 50 to 110 knots, constant 2297 ft MSL -->
+      <trkpt lat="30.524999" lon="-98.086368">
+        <ele>700.126</ele>
+        <speed>27.2655</speed> <!-- 53 knots -->
+        <time>2025-05-22T18:58:41Z</time>
+      </trkpt>
+      <trkpt lat="30.526158" lon="-98.086489">
+        <ele>700.126</ele>
+        <speed>28.8089</speed> <!-- 56 knots -->
+        <time>2025-05-22T18:58:42Z</time>
+      </trkpt>
+      <trkpt lat="30.527317" lon="-98.086610">
+        <ele>700.126</ele>
+        <speed>30.3522</speed> <!-- 59 knots -->
+        <time>2025-05-22T18:58:43Z</time>
+      </trkpt>
+      <trkpt lat="30.528476" lon="-98.086731">
+        <ele>700.126</ele>
+        <speed>31.8955</speed> <!-- 62 knots -->
+        <time>2025-05-22T18:58:44Z</time>
+      </trkpt>
+      <trkpt lat="30.529635" lon="-98.086852">
+        <ele>700.126</ele>
+        <speed>33.4388</speed> <!-- 65 knots -->
+        <time>2025-05-22T18:58:45Z</time>
+      </trkpt>
+      <trkpt lat="30.530794" lon="-98.086973">
+        <ele>700.126</ele>
+        <speed>34.9822</speed> <!-- 68 knots -->
+        <time>2025-05-22T18:58:46Z</time>
+      </trkpt>
+      <trkpt lat="30.531953" lon="-98.087094">
+        <ele>700.126</ele>
+        <speed>36.5255</speed> <!-- 71 knots -->
+        <time>2025-05-22T18:58:47Z</time>
+      </trkpt>
+      <trkpt lat="30.533112" lon="-98.087215">
+        <ele>700.126</ele>
+        <speed>38.0688</speed> <!-- 74 knots -->
+        <time>2025-05-22T18:58:48Z</time>
+      </trkpt>
+      <trkpt lat="30.534271" lon="-98.087336">
+        <ele>700.126</ele>
+        <speed>39.6122</speed> <!-- 77 knots -->
+        <time>2025-05-22T18:58:49Z</time>
+      </trkpt>
+      <trkpt lat="30.535430" lon="-98.087457">
+        <ele>600.126</ele>
+        <speed>41.1555</speed> <!-- 80 knots -->
+        <time>2025-05-22T18:58:50Z</time>
+      </trkpt>
+      <trkpt lat="30.536589" lon="-98.087578">
+        <ele>500.126</ele>
+        <speed>42.6988</speed> <!-- 83 knots -->
+        <time>2025-05-22T18:58:51Z</time>
+      </trkpt>
+      <trkpt lat="30.537748" lon="-98.087699">
+        <ele>400.126</ele>
+        <speed>44.2422</speed> <!-- 86 knots -->
+        <time>2025-05-22T18:58:52Z</time>
+      </trkpt>
+      <trkpt lat="30.538907" lon="-98.087820">
+        <ele>300.126</ele>
+        <speed>45.7855</speed> <!-- 89 knots -->
+        <time>2025-05-22T18:58:53Z</time>
+      </trkpt>
+      <trkpt lat="30.540066" lon="-98.087941">
+        <ele>243.839</ele>
+        <speed>47.3288</speed> <!-- 92 knots -->
+        <time>2025-05-22T18:58:54Z</time>
+      </trkpt>
+      <trkpt lat="30.541225" lon="-98.088062">
+        <ele>243.839</ele>
+        <speed>48.8722</speed> <!-- 95 knots -->
+        <time>2025-05-22T18:58:55Z</time>
+      </trkpt>
+      <trkpt lat="30.542384" lon="-98.088183">
+        <ele>243.839</ele>
+        <speed>50.4155</speed> <!-- 98 knots -->
+        <time>2025-05-22T18:58:56Z</time>
+      </trkpt>
+      <trkpt lat="30.543543" lon="-98.088304">
+        <ele>243.839</ele>
+        <speed>51.9588</speed> <!-- 101 knots -->
+        <time>2025-05-22T18:58:57Z</time>
+      </trkpt>
+      <trkpt lat="30.544702" lon="-98.088425">
+        <ele>243.839</ele>
+        <speed>53.5022</speed> <!-- 104 knots -->
+        <time>2025-05-22T18:58:58Z</time>
+      </trkpt>
+      <trkpt lat="30.545861" lon="-98.088546">
+        <ele>243.839</ele>
+        <speed>55.0455</speed> <!-- 107 knots -->
+        <time>2025-05-22T18:58:59Z</time>
+      </trkpt>
+      <trkpt lat="30.547020" lon="-98.088667">
+        <ele>243.839</ele>
+        <speed>56.5788</speed> <!-- 110 knots -->
+        <time>2025-05-22T18:59:00Z</time>
+      </trkpt>
+      <!-- Reversed track starting from second-to-last trackpoint -->
+      <trkpt lat="30.545861" lon="-98.088546">
+        <ele>243.839</ele>
+        <speed>55.0455</speed> <!-- 107 knots -->
+        <time>2025-05-22T18:59:01Z</time>
+      </trkpt>
+      <trkpt lat="30.544702" lon="-98.088425">
+        <ele>243.839</ele>
+        <speed>53.5022</speed> <!-- 104 knots -->
+        <time>2025-05-22T18:59:02Z</time>
+      </trkpt>
+      <trkpt lat="30.543543" lon="-98.088304">
+        <ele>243.839</ele>
+        <speed>51.9588</speed> <!-- 101 knots -->
+        <time>2025-05-22T18:59:03Z</time>
+      </trkpt>
+      <trkpt lat="30.542384" lon="-98.088183">
+        <ele>243.839</ele>
+        <speed>50.4155</speed> <!-- 98 knots -->
+        <time>2025-05-22T18:59:04Z</time>
+      </trkpt>
+      <trkpt lat="30.541225" lon="-98.088062">
+        <ele>243.839</ele>
+        <speed>48.8722</speed> <!-- 95 knots -->
+        <time>2025-05-22T18:59:05Z</time>
+      </trkpt>
+      <trkpt lat="30.540066" lon="-98.087941">
+        <ele>243.839</ele>
+        <speed>47.3288</speed> <!-- 92 knots -->
+        <time>2025-05-22T18:59:06Z</time>
+      </trkpt>
+      <trkpt lat="30.538907" lon="-98.087820">
+        <ele>300.126</ele>
+        <speed>45.7855</speed> <!-- 89 knots -->
+        <time>2025-05-22T18:59:07Z</time>
+      </trkpt>
+      <trkpt lat="30.537748" lon="-98.087699">
+        <ele>400.126</ele>
+        <speed>44.2422</speed> <!-- 86 knots -->
+        <time>2025-05-22T18:59:08Z</time>
+      </trkpt>
+      <trkpt lat="30.536589" lon="-98.087578">
+        <ele>500.126</ele>
+        <speed>42.6988</speed> <!-- 83 knots -->
+        <time>2025-05-22T18:59:09Z</time>
+      </trkpt>
+      <trkpt lat="30.535430" lon="-98.087457">
+        <ele>600.126</ele>
+        <speed>41.1555</speed> <!-- 80 knots -->
+        <time>2025-05-22T18:59:10Z</time>
+      </trkpt>
+      <trkpt lat="30.534271" lon="-98.087336">
+        <ele>700.126</ele>
+        <speed>39.6122</speed> <!-- 77 knots -->
+        <time>2025-05-22T18:59:11Z</time>
+      </trkpt>
+      <trkpt lat="30.533112" lon="-98.087215">
+        <ele>700.126</ele>
+        <speed>38.0688</speed> <!-- 74 knots -->
+        <time>2025-05-22T18:59:12Z</time>
+      </trkpt>
+      <trkpt lat="30.531953" lon="-98.087094">
+        <ele>700.126</ele>
+        <speed>36.5255</speed> <!-- 71 knots -->
+        <time>2025-05-22T18:59:13Z</time>
+      </trkpt>
+      <trkpt lat="30.530794" lon="-98.086973">
+        <ele>700.126</ele>
+        <speed>34.9822</speed> <!-- 68 knots -->
+        <time>2025-05-22T18:59:14Z</time>
+      </trkpt>
+      <trkpt lat="30.529635" lon="-98.086852">
+        <ele>700.126</ele>
+        <speed>33.4388</speed> <!-- 65 knots -->
+        <time>2025-05-22T18:59:15Z</time>
+      </trkpt>
+      <trkpt lat="30.528476" lon="-98.086731">
+        <ele>700.126</ele>
+        <speed>31.8955</speed> <!-- 62 knots -->
+        <time>2025-05-22T18:59:16Z</time>
+      </trkpt>
+      <trkpt lat="30.527317" lon="-98.086610">
+        <ele>700.126</ele>
+        <speed>30.3522</speed> <!-- 59 knots -->
+        <time>2025-05-22T18:59:17Z</time>
+      </trkpt>
+      <trkpt lat="30.526158" lon="-98.086489">
+        <ele>700.126</ele>
+        <speed>28.8089</speed> <!-- 56 knots -->
+        <time>2025-05-22T18:59:18Z</time>
+      </trkpt>
+      <trkpt lat="30.524999" lon="-98.086368">
+        <ele>700.126</ele>
+        <speed>27.2655</speed> <!-- 53 knots -->
+        <time>2025-05-22T18:59:19Z</time>
+      </trkpt>
+      <trkpt lat="30.523840" lon="-98.086247">
+        <ele>700.126</ele> <!-- 2297 ft -->
+        <speed>25.7222</speed> <!-- 50 knots -->
+        <time>2025-05-22T18:59:20Z</time>
+      </trkpt>
+      <trkpt lat="30.522681" lon="-98.086126">
+        <ele>702.603</ele> <!-- 2305.13 ft -->
+        <speed>26.2334</speed> <!-- 51 knots -->
+        <time>2025-05-22T18:59:21Z</time>
+      </trkpt>
+      <trkpt lat="30.521521" lon="-98.086004">
+        <ele>705.142</ele> <!-- 2313.46 ft -->
+        <speed>26.7478</speed> <!-- 52 knots -->
+        <time>2025-05-22T18:59:22Z</time>
+      </trkpt>
+      <trkpt lat="30.520360" lon="-98.085882">
+        <ele>707.681</ele> <!-- 2321.79 ft -->
+        <speed>27.2623</speed> <!-- 53 knots -->
+        <time>2025-05-22T18:59:23Z</time>
+      </trkpt>
+      <trkpt lat="30.519198" lon="-98.085760">
+        <ele>710.220</ele> <!-- 2330.12 ft -->
+        <speed>27.7767</speed> <!-- 54 knots -->
+        <time>2025-05-22T18:59:24Z</time>
+      </trkpt>
+      <trkpt lat="30.518035" lon="-98.085637">
+        <ele>712.759</ele> <!-- 2338.45 ft -->
+        <speed>28.2911</speed> <!-- 55 knots -->
+        <time>2025-05-22T18:59:25Z</time>
+      </trkpt>
+      <trkpt lat="30.516871" lon="-98.085514">
+        <ele>715.298</ele> <!-- 2346.78 ft -->
+        <speed>28.8056</speed> <!-- 56 knots -->
+        <time>2025-05-22T18:59:26Z</time>
+      </trkpt>
+      <trkpt lat="30.515706" lon="-98.085390">
+        <ele>717.837</ele> <!-- 2355.11 ft -->
+        <speed>29.3200</speed> <!-- 57 knots -->
+        <time>2025-05-22T18:59:27Z</time>
+      </trkpt>
+      <trkpt lat="30.514540" lon="-98.085266">
+        <ele>720.376</ele> <!-- 2363.44 ft -->
+        <speed>29.8344</speed> <!-- 58 knots -->
+        <time>2025-05-22T18:59:28Z</time>
+      </trkpt>
+      <trkpt lat="30.513373" lon="-98.085142">
+        <ele>722.915</ele> <!-- 2371.77 ft -->
+        <speed>30.3489</speed> <!-- 59 knots -->
+        <time>2025-05-22T18:59:29Z</time>
+      </trkpt>
+      <trkpt lat="30.512205" lon="-98.085017">
+        <ele>725.454</ele> <!-- 2380.10 ft -->
+        <speed>30.8633</speed> <!-- 60 knots -->
+        <time>2025-05-22T18:59:30Z</time>
+      </trkpt>
+      <trkpt lat="30.511036" lon="-98.084892">
+        <ele>727.993</ele> <!-- 2388.43 ft -->
+        <speed>31.3777</speed> <!-- 61 knots -->
+        <time>2025-05-22T18:59:31Z</time>
+      </trkpt>
+      <trkpt lat="30.509866" lon="-98.084766">
+        <ele>730.532</ele> <!-- 2396.76 ft -->
+        <speed>31.8922</speed> <!-- 62 knots -->
+        <time>2025-05-22T18:59:32Z</time>
+      </trkpt>
+      <trkpt lat="30.508695" lon="-98.084640">
+        <ele>733.071</ele> <!-- 2405.09 ft -->
+        <speed>32.4066</speed> <!-- 63 knots -->
+        <time>2025-05-22T18:59:33Z</time>
+      </trkpt>
+      <trkpt lat="30.507523" lon="-98.084514">
+        <ele>735.610</ele> <!-- 2413.42 ft -->
+        <speed>32.9210</speed> <!-- 64 knots -->
+        <time>2025-05-22T18:59:34Z</time>
+      </trkpt>
+      <trkpt lat="30.506350" lon="-98.084387">
+        <ele>738.149</ele> <!-- 2421.75 ft -->
+        <speed>33.4355</speed> <!-- 65 knots -->
+        <time>2025-05-22T18:59:35Z</time>
+      </trkpt>
+      <trkpt lat="30.505176" lon="-98.084260">
+        <ele>740.688</ele> <!-- 2430.08 ft -->
+        <speed>33.9499</speed> <!-- 66 knots -->
+        <time>2025-05-22T18:59:36Z</time>
+      </trkpt>
+      <trkpt lat="30.504001" lon="-98.084132">
+        <ele>743.227</ele> <!-- 2438.41 ft -->
+        <speed>34.4643</speed> <!-- 67 knots -->
+        <time>2025-05-22T18:59:37Z</time>
+      </trkpt>
+      <trkpt lat="30.502825" lon="-98.084004">
+        <ele>745.766</ele> <!-- 2446.74 ft -->
+        <speed>34.9788</speed> <!-- 68 knots -->
+        <time>2025-05-22T18:59:38Z</time>
+      </trkpt>
+      <trkpt lat="30.501648" lon="-98.083875">
+        <ele>748.305</ele> <!-- 2455.07 ft -->
+        <speed>35.4932</speed> <!-- 69 knots -->
+        <time>2025-05-22T18:59:39Z</time>
+      </trkpt>
+      <trkpt lat="30.500470" lon="-98.083746">
+        <ele>750.844</ele> <!-- 2463.40 ft -->
+        <speed>36.0076</speed> <!-- 70 knots -->
+        <time>2025-05-22T18:59:40Z</time>
+      </trkpt>
+      <trkpt lat="30.499291" lon="-98.083617">
+        <ele>753.383</ele> <!-- 2471.73 ft -->
+        <speed>36.5221</speed> <!-- 71 knots -->
+        <time>2025-05-22T18:59:41Z</time>
+      </trkpt>
+      <trkpt lat="30.498111" lon="-98.083487">
+        <ele>755.922</ele> <!-- 2480.06 ft -->
+        <speed>37.0365</speed> <!-- 72 knots -->
+        <time>2025-05-22T18:59:42Z</time>
+      </trkpt>
+      <trkpt lat="30.496930" lon="-98.083357">
+        <ele>758.461</ele> <!-- 2488.39 ft -->
+        <speed>37.5509</speed> <!-- 73 knots -->
+        <time>2025-05-22T18:59:43Z</time>
+      </trkpt>
+      <trkpt lat="30.495748" lon="-98.083226">
+        <ele>761.000</ele> <!-- 2496.72 ft -->
+        <speed>38.0654</speed> <!-- 74 knots -->
+        <time>2025-05-22T18:59:44Z</time>
+      </trkpt>
+      <trkpt lat="30.494565" lon="-98.083095">
+        <ele>763.539</ele> <!-- 2505.05 ft -->
+        <speed>38.5798</speed> <!-- 75 knots -->
+        <time>2025-05-22T18:59:45Z</time>
+      </trkpt>
+      <trkpt lat="30.493381" lon="-98.082963">
+        <ele>766.078</ele> <!-- 2513.38 ft -->
+        <speed>39.0942</speed> <!-- 76 knots -->
+        <time>2025-05-22T18:59:46Z</time>
+      </trkpt>
+      <trkpt lat="30.492196" lon="-98.082831">
+        <ele>768.617</ele> <!-- 2521.71 ft -->
+        <speed>39.6087</speed> <!-- 77 knots -->
+        <time>2025-05-22T18:59:47Z</time>
+      </trkpt>
+      <trkpt lat="30.491010" lon="-98.082698">
+        <ele>771.156</ele> <!-- 2530.04 ft -->
+        <speed>40.1231</speed> <!-- 78 knots -->
+        <time>2025-05-22T18:59:48Z</time>
+      </trkpt>
+      <trkpt lat="30.489823" lon="-98.082565">
+        <ele>773.695</ele> <!-- 2538.37 ft -->
+        <speed>40.6375</speed> <!-- 79 knots -->
+        <time>2025-05-22T18:59:49Z</time>
+      </trkpt>
+      <trkpt lat="30.488635" lon="-98.082431">
+        <ele>776.234</ele> <!-- 2546.70 ft -->
+        <speed>41.1520</speed> <!-- 80 knots -->
+        <time>2025-05-22T18:59:50Z</time>
+      </trkpt>
+      <trkpt lat="30.487446" lon="-98.082297">
+        <ele>778.773</ele> <!-- 2555.03 ft -->
+        <speed>41.6664</speed> <!-- 81 knots -->
+        <time>2025-05-22T18:59:51Z</time>
+      </trkpt>
+      <trkpt lat="30.486256" lon="-98.082162">
+        <ele>781.312</ele> <!-- 2563.36 ft -->
+        <speed>42.1808</speed> <!-- 82 knots -->
+        <time>2025-05-22T18:59:52Z</time>
+      </trkpt>
+      <trkpt lat="30.485065" lon="-98.082027">
+        <ele>783.851</ele> <!-- 2571.69 ft -->
+        <speed>42.6953</speed> <!-- 83 knots -->
+        <time>2025-05-22T18:59:53Z</time>
+      </trkpt>
+      <trkpt lat="30.483873" lon="-98.081892">
+        <ele>786.390</ele> <!-- 2580.02 ft -->
+        <speed>43.2097</speed> <!-- 84 knots -->
+        <time>2025-05-22T18:59:54Z</time>
+      </trkpt>
+      <trkpt lat="30.482680" lon="-98.081756">
+        <ele>788.929</ele> <!-- 2588.35 ft -->
+        <speed>43.7241</speed> <!-- 85 knots -->
+        <time>2025-05-22T18:59:55Z</time>
+      </trkpt>
+      <trkpt lat="30.481486" lon="-98.081620">
+        <ele>791.468</ele> <!-- 2596.68 ft -->
+        <speed>44.2386</speed> <!-- 86 knots -->
+        <time>2025-05-22T18:59:56Z</time>
+      </trkpt>
+      <trkpt lat="30.480291" lon="-98.081483">
+        <ele>794.007</ele> <!-- 2605.01 ft -->
+        <speed>44.7530</speed> <!-- 87 knots -->
+        <time>2025-05-22T18:59:57Z</time>
+      </trkpt>
+      <trkpt lat="30.479095" lon="-98.081346">
+        <ele>796.546</ele> <!-- 2613.34 ft -->
+        <speed>45.2674</speed> <!-- 88 knots -->
+        <time>2025-05-22T18:59:58Z</time>
+      </trkpt>
+      <trkpt lat="30.477898" lon="-98.081208">
+        <ele>799.085</ele> <!-- 2621.67 ft -->
+        <speed>45.7819</speed> <!-- 89 knots -->
+        <time>2025-05-22T18:59:59Z</time>
+      </trkpt>
+      <trkpt lat="30.476700" lon="-98.081070">
+        <ele>801.624</ele> <!-- 2630 ft -->
+        <speed>46.2963</speed> <!-- 90 knots -->
+        <time>2025-05-22T19:00:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

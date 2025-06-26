@@ -1,2 +1,5 @@
 -keep class AviationApp.** { *; }
 -keep class CsvHelper.** { *; }
+-keep class System.Net.Http.** { *; }
+-keep class System.Text.Json.** { *; }
+-keep class System.Net.HttpListener* { *; }
