@@ -120,7 +120,8 @@
                        SemanticProperties.HeadingLevel="Level1" />
 
                 <!-- DMMS Entry -->
-                <Picker x:Name="DmmsPicker"
+                <StackLayout>
+                    <Picker x:Name="DmmsPicker"
                         SelectedItem="{Binding DmmsText}"
                         FontFamily="OpenSansRegular"
                         FontAttributes="Bold"
@@ -128,13 +129,27 @@
                         TextColor="{StaticResource White}"
                         HorizontalOptions="Center"
                         BackgroundColor="{StaticResource Primary}"
-                        Opacity="1" 
+                        Opacity="1"
                         WidthRequest="200"
                         HeightRequest="50"
                         Margin="0,10,0,0"
-                        ItemsSource="{Binding SpeedRange}"
-                        SelectedIndex="69" />
-                    <!--<Entry Placeholder="Enter DMMS (knots)"
+                        ItemsSource="{Binding SpeedRange}" />
+                    <Label x:Name="StallSpeedLabel" FontSize="16" TextColor="{StaticResource White}" />
+                </StackLayout>
+                <!--<Picker x:Name="DmmsPicker"
+                        SelectedItem="{Binding DmmsText}"
+                        FontFamily="OpenSansRegular"
+                        FontAttributes="Bold"
+                        FontSize="24"
+                        TextColor="{StaticResource White}"
+                        HorizontalOptions="Center"
+                        BackgroundColor="{StaticResource Primary}"
+                        Opacity="1"
+                        WidthRequest="200"
+                        HeightRequest="50"
+                        Margin="0,10,0,0"
+                        ItemsSource="{Binding SpeedRange}" />-->
+                <!--<Entry Placeholder="Enter DMMS (knots)"
                        Keyboard="Numeric"
                        Text="{Binding DmmsText}"
                        FontFamily="OpenSansRegular"
@@ -158,7 +173,6 @@
                        HorizontalTextAlignment="Center"
                        SemanticProperties.HeadingLevel="Level2"
                        SemanticProperties.Description="DMMS (KNOTS)" />
-                <Label x:Name="StallSpeedLabel" Text="Stall Speed: 0 knots" Style="{StaticResource SubHeadline}" />                
                 <Slider x:Name="TTSVolumeSlider"
                         Minimum="0.5"
                         Maximum="1.0"

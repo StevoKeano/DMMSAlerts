@@ -31,20 +31,17 @@ namespace AviationApp;
 
 
 public enum ButtonState { Active, Paused, Failed, PermissionRequired}
-
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class MainPage : ContentPage, INotifyPropertyChanged
 {
     // count sux.  It's 0 if counterbtn
     // unclicked, >0 if clicked. Counts clicks; but, pause sets it back to 0 I 
     private int count = 0;
-
     private string latitudeText = "Latitude: N/A";
     private string longitudeText = "Longitude: N/A";
     private string altitudeText = "Altitude: N/A";
     private string speedText = "Speed: N/A";
-    private string lastUpdateText = "Last Update: N/A";
-    private string dmmsText;
+    private string lastUpdateText = "Last Update: N/A";    
     private string warningLabelText;
     private bool isActive = false;
     private ButtonState buttonState = ButtonState.PermissionRequired;
@@ -64,7 +61,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private int _originalMediaVolume = -1;
     private string ttsAlertText;
     private float messageFrequency;
-
     private bool autoActivateMonitoring;
     private bool suppressWarningsUntilAboveDmms;
     private string closestAirportText = "Closest Airport: N/A";
@@ -82,7 +78,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private readonly float kmtomiles = 0.621371f;
     private bool disableAlerts; // Add field for alert suppression
     private string lastStationID = "N/A";
-
     private float ttsAlertVolume;
     private CancellationTokenSource ttsTestCts;
     private Task ttsTestTask;
@@ -91,14 +86,12 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     private readonly TimeSpan ttsTestDuration = TimeSpan.FromSeconds(5);
     private double _zeroGStallSpeed;
     private float _lastX, _lastY, _lastZ; // Store last accelerometer readings
-
     private Microsoft.Maui.Devices.Sensors.Location lastLocation; // Last known location
     private float windAdjustment = 0f; // Wind effect in knots (ManualIAS - GPS speed)
     private double referenceHeading = 0.0; // Heading when ManualIAS was set (degrees)
     private bool isWindAdjustmentSet = false; // Flag to enable wind adjustment
                                               // Picker for DMMS 
-    public ObservableCollection<string> SpeedRange { get; set; } = 
-        new ObservableCollection<string>(Enumerable.Range(1, 270).Select(i => i.ToString()));
+    //public ObservableCollection<string> SpeedRange { get; set; }
     public float TTSAlertVolume
     {
         get => ttsAlertVolume;
@@ -146,23 +139,21 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         get => lastUpdateText;
         set { lastUpdateText = value; OnPropertyChanged(); }
     }
-
+    private string _dmmsText;
     public string DmmsText
     {
-        get => dmmsText;
+        get => _dmmsText;
         set
         {
-            if (dmmsText != value)
+            if (_dmmsText != value)
             {
-                dmmsText = value;
-                OnPropertyChanged();
+                _dmmsText = value;
                 Preferences.Set("DmmsValue", value);
-                Log.Debug("MainPage", $"Saved DmmsText to Preferences: {value}");
-                if (double.TryParse(dmmsText, out double parsedValue))
+                OnPropertyChanged(nameof(DmmsText));
+                if (double.TryParse(_dmmsText, out double parsedValue))
                 {
                     _zeroGStallSpeed = parsedValue;
                     System.Diagnostics.Debug.WriteLine($"MainPage: Updated _zeroGStallSpeed to {parsedValue:F0} knots");
-                    // Force update StallSpeedLabel
                     double gForce = CalculateGForceFromLastReading();
                     double adjustedStallSpeed = AdjustStallSpeed(gForce);
                     MainThread.BeginInvokeOnMainThread(() =>
@@ -178,6 +169,40 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             }
         }
     }
+
+    public ObservableCollection<string> SpeedRange { get; private set; }
+
+    //public string DmmsText
+    //{
+    //    get => dmmsText;
+    //    set
+    //    {
+    //        if (dmmsText != value)
+    //        {
+    //            dmmsText = value;
+    //            OnPropertyChanged();
+    //            Preferences.Set("DmmsValue", value);
+    //            Log.Debug("MainPage", $"Saved DmmsText to Preferences: {value}");
+    //            if (double.TryParse(dmmsText, out double parsedValue))
+    //            {
+    //                _zeroGStallSpeed = parsedValue;
+    //                System.Diagnostics.Debug.WriteLine($"MainPage: Updated _zeroGStallSpeed to {parsedValue:F0} knots");
+    //                // Force update StallSpeedLabel
+    //                double gForce = CalculateGForceFromLastReading();
+    //                double adjustedStallSpeed = AdjustStallSpeed(gForce);
+    //                MainThread.BeginInvokeOnMainThread(() =>
+    //                {
+    //                    StallSpeedLabel.Text = $"G-Adjusted Stall Speed: {adjustedStallSpeed:F0} knots";
+    //                    System.Diagnostics.Debug.WriteLine($"MainPage:DmmsText.set() Updated StallSpeedLabel to {adjustedStallSpeed:F0} knots, G-Force: {gForce:F2}");
+    //                });
+    //            }
+    //            else
+    //            {
+    //                System.Diagnostics.Debug.WriteLine($"MainPage: Failed to parse DmmsText '{value}' to double");
+    //            }
+    //        }
+    //    }
+    //}
 
     public string WarningLabelText
     {
@@ -307,8 +332,14 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
     public MainPage(IPlatformService platformService, LocationService locationService)
     {
         // Load settings at startup
-        dmmsText = Preferences.Get("DmmsValue", "70");
-        double.TryParse(dmmsText, out _zeroGStallSpeed);
+        // Initialize platform services and settings
+        _platformService = platformService;
+        _locationService = locationService;
+        SpeedRange = new ObservableCollection<string>(Enumerable.Range(1, 270).Select(i => i.ToString()));
+        LoadSettings(); // Safe settings load 
+        // Fix: Use _dmmsText instead of dmmsText
+        double.TryParse(_dmmsText, out _zeroGStallSpeed);
+     
         airportCallOuts = Preferences.Get("AirportCallOuts", true);
         warningLabelText = Preferences.Get("WarningLabelText", "< DMMS Alerter <");
         ttsAlertText = Preferences.Get("TtsAlertText", "SPEED CHECK, YOUR GONNA FALL OUTTA THE SKY LIKE UH PIANO");
@@ -318,13 +349,27 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         showSkullWarning = false;
         suppressWarningsUntilAboveDmms = true;
         airports = new List<Airport>();
-        Log.Debug("MainPage", $"Loaded settings at startup - AirportCallOuts:{airportCallOuts}, DmmsText: {dmmsText}, WarningLabelText: {warningLabelText}, TtsAlertText: {ttsAlertText}, MessageFrequency: {messageFrequency}, ShowSkull: {showSkull}, AutoActivateMonitoring: {autoActivateMonitoring}, ShowSkullWarning: {showSkullWarning}, SuppressWarnings: {suppressWarningsUntilAboveDmms}");
+        Log.Debug("MainPage", $"Loaded settings at startup - AirportCallOuts:{airportCallOuts}, WarningLabelText: {warningLabelText}, TtsAlertText: {ttsAlertText}, MessageFrequency: {messageFrequency}, ShowSkull: {showSkull}, AutoActivateMonitoring: {autoActivateMonitoring}, ShowSkullWarning: {showSkullWarning}, SuppressWarnings: {suppressWarningsUntilAboveDmms}");
         System.Diagnostics.Debug.WriteLine($"ShowSkullWarning initial value: {ShowSkullWarning}");
         BindingContext = this;
         ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f); // Default to full volume
-
+        // Initialize data before UI rendering
         InitializeComponent();
+                // New: Initialize SpeedRange and DmmsText after InitializeComponent
+        SpeedRange = new ObservableCollection<string>(Enumerable.Range(1, 270).Select(i => i.ToString()));
+        var prefValue = Preferences.Get("DmmsValue", "70");
+        System.Diagnostics.Debug.WriteLine($"MainPage: Loaded DmmsValue from Preferences: '{prefValue}'");
+        _dmmsText = string.IsNullOrEmpty(prefValue) || !SpeedRange.Contains(prefValue) ? "70" : prefValue;
+        Preferences.Set("DmmsValue", _dmmsText);
+        double.TryParse(_dmmsText, out _zeroGStallSpeed);
+        LoadSettings(); // Safe settings load
         Preferences.Set("ManualIAS", 0f); // Reset ManualIAS to 0 at startup
+
+        // Force Picker refresh
+        var picker = this.FindByName<Picker>("DmmsPicker");
+        picker.SelectedItem = _dmmsText; // Ensure selection is set                                          // Debug initial state
+        System.Diagnostics.Debug.WriteLine($"DmmsText: {_dmmsText}, SpeedRange[69]: {SpeedRange[69]}");
+
         _platformService = platformService;
         _locationService = locationService;
         // Register for ManualIAS changes
@@ -519,9 +564,23 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                 }
                             }
 
-                            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
-                            {
-                                var validMetar = metars
+                        MetarData validMetar = null;
+                        // New: Select nearest METAR if multiple received
+                        if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
+                        {
+                            var validMetars = metars
+                                                        .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                                        .ToList();
+                            var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
+                            validMetar = validMetars
+                                                        .Where(m => airportCoords.ContainsKey(m.IcaoId))
+                                                        .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
+                                                        .FirstOrDefault();
+                        }
+                        // Fallback to any valid METAR if none within 60 minutes
+                        if (validMetar == null && metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                        {
+                               validMetar = metars
                                     .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue)
                                     .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
                                     .FirstOrDefault();
@@ -572,10 +631,23 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                         Log.Error("DMMSAlerts", $"METAR deserialization error from bbox: {ex.Message}");
                                         System.Diagnostics.Debug.WriteLine($"LocationMessage: METAR deserialization error from bbox: {ex.Message}");
                                     }
-
-                                    if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue ))
+                                validMetar = null;
+                                // New: Select nearest METAR if multiple received
+                                if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
                                     {
-                                        var validMetar = metars
+                                    var validMetars = metars
+                                            .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                            .ToList();
+                                    var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
+                                    validMetar = validMetars
+                                            .Where(m => airportCoords.ContainsKey(m.IcaoId))
+                                            .OrderBy(m => CalculateDistance(location.Latitude, location.Longitude, airportCoords[m.IcaoId].Latitude, airportCoords[m.IcaoId].Longitude))
+                                            .FirstOrDefault();
+                                    }
+                                // Fallback to any valid METAR if none within 60 minutes
+                                if (validMetar == null && metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                                 {
+                                         validMetar = metars
                                             .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue )
                                             .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
                                             .FirstOrDefault();
@@ -1118,7 +1190,21 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         return R * c; // Distance in km
     }
+    // New: Safe settings load
+    private void LoadSettings()
+    {
+        System.Diagnostics.Debug.WriteLine("MainPage: Loading settings");
+        var loadedDmms = Preferences.Get("DmmsValue", "70");
+        if (SpeedRange != null && SpeedRange.Contains(loadedDmms) && !string.IsNullOrEmpty(loadedDmms) && StallSpeedLabel != null)
 
+        {
+            DmmsText = loadedDmms;
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"MainPage: Ignored invalid DmmsText '{loadedDmms}' from settings");
+        }
+    }
     private Airport FindClosestAirport(double latitude, double longitude)
     {
         return airports.OrderBy(a => CalculateDistance(latitude, longitude, a.Latitude, a.Longitude))
