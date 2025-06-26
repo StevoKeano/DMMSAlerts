@@ -355,7 +355,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         ttsAlertVolume = Preferences.Get("TTSAlertVolume", 1.0f); // Default to full volume
         // Initialize data before UI rendering
         InitializeComponent();
-                // New: Initialize SpeedRange and DmmsText after InitializeComponent
+        // New: Initialize SpeedRange and DmmsText after InitializeComponent
         SpeedRange = new ObservableCollection<string>(Enumerable.Range(1, 270).Select(i => i.ToString()));
         var prefValue = Preferences.Get("DmmsValue", "70");
         System.Diagnostics.Debug.WriteLine($"MainPage: Loaded DmmsValue from Preferences: '{prefValue}'");
@@ -566,10 +566,10 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
 
                         MetarData validMetar = null;
                         // New: Select nearest METAR if multiple received
-                        if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
+                        if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
                         {
                             var validMetars = metars
-                                                        .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
                                                         .ToList();
                             var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
                             validMetar = validMetars
@@ -578,15 +578,16 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                                         .FirstOrDefault();
                         }
                         // Fallback to any valid METAR if none within 60 minutes
-                        if (validMetar == null && metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                        if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
                         {
                                validMetar = metars
-                                    .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue)
+                                    .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
                                     .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
                                     .FirstOrDefault();
                                 if (validMetar != null)
                                 {
-                                    metarWindDirection = validMetar.Wdir.Value;
+                                    int.TryParse(validMetar.Wdir, out var wdir);
+                                    metarWindDirection = wdir;
                                     metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value / 2 : 0);
                                     metarAirportID = validMetar.IcaoId;
                                     IsUsingMetarWind = true; // Updated to use property
@@ -610,8 +611,6 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                 System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs or invalid data for {lastStationID}");
 
                                 //// Fetch METAR data if no previous fetch or data is stale
-                                //if (!Preferences.ContainsKey($"LastMetarFetch_{lastStationID}") || isMetarStale)
-                                //{
                                 // Get METAR for a bound box bbox lat log's
                                 response = await GetWindData(location);
                                 System.Diagnostics.Debug.WriteLine($"LocationMessage: GetWindData response: {(string.IsNullOrEmpty(response) ? "Empty" : "Received")}");
@@ -633,10 +632,10 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                     }
                                 validMetar = null;
                                 // New: Select nearest METAR if multiple received
-                                if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
-                                    {
+                                if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60))
+                                {
                                     var validMetars = metars
-                                            .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
+                                             .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue && DateTime.TryParse(m.ReceiptTime, out var time) && (DateTime.UtcNow - time).TotalMinutes <= 60)
                                             .ToList();
                                     var airportCoords = airports.ToDictionary(a => a.StationId, a => (a.Latitude, a.Longitude));
                                     validMetar = validMetars
@@ -645,15 +644,17 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                             .FirstOrDefault();
                                     }
                                 // Fallback to any valid METAR if none within 60 minutes
-                                if (validMetar == null && metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
-                                 {
-                                         validMetar = metars
-                                            .Where(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue )
+                                if (validMetar == null && metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
+
+                                {
+                                    validMetar = metars                                            
+                                             .Where(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue)
                                             .OrderByDescending(m => DateTime.TryParse(m.ReceiptTime, out var time) ? time : DateTime.MinValue)
                                             .FirstOrDefault();
                                         if (validMetar != null)
                                         {
-                                            metarWindDirection = validMetar.Wdir.Value;
+                                            int.TryParse(validMetar.Wdir, out var wdir);
+                                            metarWindDirection = wdir;
                                             metarWindSpeed = validMetar.Wspd.Value + (validMetar.Wgst.HasValue ? validMetar.Wgst.Value/2 :  0);
                                             metarAirportID = validMetar.IcaoId;
                                             IsUsingMetarWind = true; // Updated to use property
@@ -669,13 +670,13 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                             System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data from bbox");
                                             IsUsingMetarWind = false;
                                         }
-                                    }
-                                    else
-                                    {
+                                }
+                                else
+                                {
                                         Log.Warn("DMMSAlerts", $"No METARs from bbox");
                                         System.Diagnostics.Debug.WriteLine($"LocationMessage: No METARs from bbox");
                                         IsUsingMetarWind = false;
-                                    }
+                                }
                                 }
                             }
                         }
@@ -816,7 +817,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
             response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
             var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
-            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+                if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
+
                 {
                     System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
                     System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");                
@@ -844,7 +846,7 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             // Use ICAO code for precise airport METAR data
             var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
             var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
-            if (metars != null && metars.Any(m => m.Wdir.HasValue && m.Wdir >= 0 && m.Wdir <= 360 && m.Wspd.HasValue))
+            if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
             {
                 System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
                 System.Diagnostics.Debug.WriteLine($"Wind Data for {airportCode}: {response}");
@@ -859,18 +861,39 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         }
         return string.Empty; // Ensure we return an empty string if no valid data found
     }
-    public record MetarData
+    public record MetarData //  https://x.com/i/grok?conversation=1937912238297264182
     {
         [JsonPropertyName("icaoId")]
         public string? IcaoId { get; init; }
         [JsonPropertyName("wdir")]
-        public int? Wdir { get; init; }
+        [JsonConverter(typeof(WindDirectionConverter))]
+        public string? Wdir { get; init; }
         [JsonPropertyName("wspd")]
         public int? Wspd { get; init; }
         [JsonPropertyName("wgst")]
         public int? Wgst { get; init; }
         [JsonPropertyName("receiptTime")]
         public string ReceiptTime { get; init; }
+    }
+    // New: Custom converter for wind direction
+    public class WindDirectionConverter : JsonConverter<string?>
+    {
+        public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+                return reader.GetString();
+            if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var number))
+                return number.ToString();
+            return null;
+        }
+
+        public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+        {
+            if (value == null)
+                writer.WriteNullValue();
+            else
+                writer.WriteStringValue(value);
+        }
     }
     public class ManualIASChangedMessage
     {

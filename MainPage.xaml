@@ -128,42 +128,13 @@
                         FontSize="24"
                         TextColor="{StaticResource White}"
                         HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"
                         BackgroundColor="{StaticResource Primary}"
                         Opacity="1"
                         WidthRequest="200"
                         HeightRequest="50"
                         Margin="0,10,0,0"
                         ItemsSource="{Binding SpeedRange}" />
-                    <Label x:Name="StallSpeedLabel" FontSize="16" TextColor="{StaticResource White}" />
-                </StackLayout>
-                <!--<Picker x:Name="DmmsPicker"
-                        SelectedItem="{Binding DmmsText}"
-                        FontFamily="OpenSansRegular"
-                        FontAttributes="Bold"
-                        FontSize="24"
-                        TextColor="{StaticResource White}"
-                        HorizontalOptions="Center"
-                        BackgroundColor="{StaticResource Primary}"
-                        Opacity="1"
-                        WidthRequest="200"
-                        HeightRequest="50"
-                        Margin="0,10,0,0"
-                        ItemsSource="{Binding SpeedRange}" />-->
-                <!--<Entry Placeholder="Enter DMMS (knots)"
-                       Keyboard="Numeric"
-                       Text="{Binding DmmsText}"
-                       FontFamily="OpenSansRegular"
-                       FontAttributes="Bold"
-                       FontSize="24"
-                       TextColor="{StaticResource White}"
-                       PlaceholderColor="{StaticResource Gray100}"
-                       HorizontalTextAlignment="Center"
-                       BackgroundColor="{StaticResource Primary}"
-                       Opacity="0.5"
-                       WidthRequest="200"
-                       HeightRequest="50"
-                       Margin="0,10,0,0" />-->
-
                 <!-- Knots Label -->
                 <Label Text="(KNOTS)"
                        Style="{StaticResource SubHeadline}"
@@ -172,7 +143,11 @@
                        TextColor="{StaticResource Gray100}"
                        HorizontalTextAlignment="Center"
                        SemanticProperties.HeadingLevel="Level2"
-                       SemanticProperties.Description="DMMS (KNOTS)" />
+                       SemanticProperties.Description="DMMS (KNOTS)" /> 
+                    <Label x:Name="StallSpeedLabel" HorizontalTextAlignment="Center" FontSize="16" TextColor="{StaticResource White}" />
+                </StackLayout>
+
+
                 <Slider x:Name="TTSVolumeSlider"
                         Minimum="0.5"
                         Maximum="1.0"
