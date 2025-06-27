@@ -244,23 +244,23 @@ public class LocationService : Service
                 WeakReferenceMessenger.Default.Send(new LocationMessage(location, DateTime.Now));
                 Log.Debug("LocationService", "Sent LocationMessage");
 
-                if (location.HasSpeed)
-                {
-                    float speedKnots = location.Speed * METERS_PER_SECOND_TO_KNOTS;
-                    if (speedKnots < DMMS_THRESHOLD)
-                    {
-                        string alertMessage = $"Acceleration plateau detected at {speedKnots:F1} knots, below DMMS {DMMS_THRESHOLD:F1}";
-                        Log.Debug("LocationService", $"Triggering alert: {alertMessage}");
-                        System.Diagnostics.Debug.WriteLine($"LocationService: Triggering alert: {alertMessage}");
-                        service.TriggerAlert(alertMessage);
-                    }
-                }
-                else
-                {
-                    Log.Debug("LocationService", "Location has no speed data");
-                    System.Diagnostics.Debug.WriteLine("LocationService: Location has no speed data");
+                //if (location.HasSpeed)
+                //{
+                //    float speedKnots = location.Speed * METERS_PER_SECOND_TO_KNOTS;
+                //    if (speedKnots < DMMS_THRESHOLD)
+                //    {
+                //        string alertMessage = $"Acceleration plateau detected at {speedKnots:F1} knots, below DMMS {DMMS_THRESHOLD:F1}";
+                //        Log.Debug("LocationService", $"Triggering alert: {alertMessage}");
+                //        System.Diagnostics.Debug.WriteLine($"LocationService: Triggering alert: {alertMessage}");
+                //        service.TriggerAlert(alertMessage);
+                //    }
+                //}
+                //else
+                //{
+                //    Log.Debug("LocationService", "Location has no speed data");
+                //    System.Diagnostics.Debug.WriteLine("LocationService: Location has no speed data");
 
-                }
+                //}
             }
             catch (Exception ex)
             {
@@ -287,52 +287,52 @@ public class LocationService : Service
         }
     }
 
-    private void TriggerAlert(string alertMessage)
-    {
-        try
-        {
-            if (DateTime.Now - lastAlertTime < alertThrottleInterval)
-            {
-                Log.Debug("LocationService", $"Alert throttled: {alertMessage}");
-                return;
-            }
-            lastAlertTime = DateTime.Now;
+    //private void TriggerAlert(string alertMessage)
+    //{
+    //    try
+    //    {
+    //        if (DateTime.Now - lastAlertTime < alertThrottleInterval)
+    //        {
+    //            Log.Debug("LocationService", $"Alert throttled: {alertMessage}");
+    //            return;
+    //        }
+    //        lastAlertTime = DateTime.Now;
 
-            // Run notification on background thread
-            Task.Run(() =>
-            {
-                try
-                {
-                    var channelId = "LocationServiceChannel";
-                    var notificationManager = GetSystemService(Context.NotificationService) as NotificationManager;
-                    var intent = new Intent(this, typeof(MainActivity));
-                    intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.SingleTop);
-                    intent.PutExtra("AlertMessage", alertMessage);
-                    var pendingIntent = PendingIntent.GetActivity(this, 0, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+    //        // Run notification on background thread
+    //        Task.Run(() =>
+    //        {
+    //            try
+    //            {
+    //                var channelId = "LocationServiceChannel";
+    //                var notificationManager = GetSystemService(Context.NotificationService) as NotificationManager;
+    //                var intent = new Intent(this, typeof(MainActivity));
+    //                intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.SingleTop);
+    //                intent.PutExtra("AlertMessage", alertMessage);
+    //                var pendingIntent = PendingIntent.GetActivity(this, 0, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
 
-                    var notification = new NotificationCompat.Builder(this, channelId)
-                        .SetContentTitle("DMMS Alert")
-                        .SetContentText(alertMessage)
-                        .SetSmallIcon(Android.Resource.Drawable.IcDialogAlert)
-                        .SetPriority((int)NotificationPriority.High)
-                        .SetContentIntent(pendingIntent)
-                        .SetAutoCancel(true)
-                        .Build();
+    //                var notification = new NotificationCompat.Builder(this, channelId)
+    //                    .SetContentTitle("DMMS Alert")
+    //                    .SetContentText(alertMessage)
+    //                    .SetSmallIcon(Android.Resource.Drawable.IcDialogAlert)
+    //                    .SetPriority((int)NotificationPriority.High)
+    //                    .SetContentIntent(pendingIntent)
+    //                    .SetAutoCancel(true)
+    //                    .Build();
 
-                    notificationManager.Notify(2, notification);
-                    Log.Debug("LocationService", $"Alert notification sent: {alertMessage}");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("LocationService", $"TriggerAlert error: {ex.Message}\n{ex.StackTrace}");
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Log.Error("LocationService", $"TriggerAlert error: {ex.Message}\n{ex.StackTrace}");
-        }
-    }
+    //                notificationManager.Notify(2, notification);
+    //                Log.Debug("LocationService", $"Alert notification sent: {alertMessage}");
+    //            }
+    //            catch (Exception ex)
+    //            {
+    //                Log.Error("LocationService", $"TriggerAlert error: {ex.Message}\n{ex.StackTrace}");
+    //            }
+    //        });
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Log.Error("LocationService", $"TriggerAlert error: {ex.Message}\n{ex.StackTrace}");
+    //    }
+    //}
 }
 
 public class LocationMessage
