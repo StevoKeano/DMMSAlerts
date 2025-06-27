@@ -685,37 +685,37 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                                         IsUsingMetarWind = false;
                                     }
                                     if (validMetar != null)
+                                    {
+                                        if (int.TryParse(validMetar.Wdir, out var wdir) && wdir >= 0 && wdir <= 360)
                                         {
-                                            if (int.TryParse(validMetar.Wdir, out var wdir) && wdir >= 0 && wdir <= 360)
+                                            metarWindDirection = wdir;
+                                            metarWindSpeed = validMetar.Wspd.Value;
+                                            if (validMetar.Wgst.HasValue && validMetar.Wgst.Value > validMetar.Wspd.Value)
                                             {
-                                                metarWindDirection = wdir;
-                                                metarWindSpeed = validMetar.Wspd.Value;
-                                                if (validMetar.Wgst.HasValue && validMetar.Wgst.Value > validMetar.Wspd.Value)
-                                                {
-                                                    metarWindSpeed += (validMetar.Wgst.Value - validMetar.Wspd.Value) / 2;
-                                                }
-                                                metarAirportID = validMetar.IcaoId;
-                                                IsUsingMetarWind = true; // Updated to use property
-                                                Log.Info("DMMSAlerts", $"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
-                                                System.Diagnostics.Debug.WriteLine($"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                                metarWindSpeed += (validMetar.Wgst.Value - validMetar.Wspd.Value) / 2;
+                                            }
+                                            metarAirportID = validMetar.IcaoId;
+                                            IsUsingMetarWind = true; // Updated to use property
+                                            Log.Info("DMMSAlerts", $"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
+                                            System.Diagnostics.Debug.WriteLine($"METAR Wind (bbox): Direction={metarWindDirection}°, Speed={metarWindSpeed}kt, Gust={validMetar.Wgst}kt");
 
-                                                // Update the fetch timestamp only on successful fetch
-                                                Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
-                                            }
-                                            else
-                                            {
-                                                Log.Warn("DMMSAlerts", $"Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
-                                                System.Diagnostics.Debug.WriteLine($"LocationMessage: Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
-                                                validMetar = null;
-                                                IsUsingMetarWind = false;
-                                            }
+                                            // Update the fetch timestamp only on successful fetch
+                                            Preferences.Set($"LastMetarFetch_{lastStationID}", DateTime.Now.ToString("o"));
                                         }
                                         else
                                         {
-                                            Log.Warn("DMMSAlerts", $"No valid METAR data from bbox");
-                                            System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data from bbox");
+                                            Log.Warn("DMMSAlerts", $"Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
+                                            System.Diagnostics.Debug.WriteLine($"LocationMessage: Invalid Wdir in selected METAR for {lastStationID}: {validMetar.Wdir}");
+                                            validMetar = null;
                                             IsUsingMetarWind = false;
                                         }
+                                    }
+                                    else
+                                    {
+                                        Log.Warn("DMMSAlerts", $"No valid METAR data from bbox");
+                                        System.Diagnostics.Debug.WriteLine($"LocationMessage: No valid METAR data from bbox");
+                                        IsUsingMetarWind = false;
+                                    }
 
                                 }
                             }
@@ -839,6 +839,8 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             }
         });
     }
+
+
     private static HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler();
@@ -902,18 +904,34 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
             System.Diagnostics.Debug.WriteLine($"OnNavigatedTo: Picker or SpeedRange invalid (Picker: {picker != null}, SpeedRange: {SpeedRange?.Count ?? 0}, DmmsText: {_dmmsText})");
         }
     }
+    //private static async Task<bool> RequestStoragePermission()
+    //{
+    //    if (DeviceInfo.Platform != DevicePlatform.Android || DeviceInfo.Version.Major >= 10)
+    //        return true; // No need for WRITE_EXTERNAL_STORAGE on Android 10+
+    //    var status = await Permissions.CheckStatusAsync<Permissions.StorageWrite>();
+    //    if (status != PermissionStatus.Granted)
+    //    {
+    //        status = await Permissions.RequestAsync<Permissions.StorageWrite>();
+    //        Log.Info("DMMSAlerts", $"Storage permission status: {status}");
+    //        System.Diagnostics.Debug.WriteLine($"Storage permission status: {status}");
+    //    }
+    //    return status == PermissionStatus.Granted;
+    //}
     public static async Task<string> GetWindData(Microsoft.Maui.Devices.Sensors.Location here)
     {
         if (here == null || double.IsNaN(here.Latitude))
         {
             System.Diagnostics.Debug.WriteLine("GetWindData: Invalid location or NULL Latitude");
+            Log.Info("DMMSAlerts", "GetWindData: Invalid location or NULL Latitude");
             return string.Empty;
         }
-        double increment = 0.05; // Smaller increment for more precise bounding box
-        using var client = new CreateHttpClient();
+
+
+        double increment = 0.05; // Smaller increment for more precise bounding box        
         try
         {
-            // Use ICAO code for precise airport METAR data
+            using var client = CreateHttpClient(); // Use the custom HttpClient with TLS settings
+                                                   // Use ICAO code for precise airport METAR data
             var response = ""; // Initialize response to empty array
             for (double i = .25; i < 2.0; i += increment)
             {
@@ -921,14 +939,18 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
                 double lat2 = Math.Round(here.Latitude + i, 2);
                 double lon1 = Math.Round(here.Longitude - i, 2);
                 double lon2 = Math.Round(here.Longitude + i, 2);
-                System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
-                response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json");
+                var url = $"https://aviationweather.gov/api/data/metar?bbox={lat1},{lon1},{lat2},{lon2}&format=json";
+                System.Diagnostics.Debug.WriteLine($"GetWindData: Sending request to {url}");
+                Log.Info("DMMSAlerts", $"GetWindData: Sending request to {url}");
+                response = await client.GetStringAsync(url);
+                System.Diagnostics.Debug.WriteLine($"GetWindData: Response length for {url}: {response?.Length ?? 0}");
+                Log.Info("DMMSAlerts", $"GetWindData: Response length for {url}: {response?.Length ?? 0}");
                 var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
                 if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
-
                 {
                     System.Diagnostics.Debug.WriteLine($"Wind Data for {lon1},{lat1},{lon2},{lat2}: {response}");
                     System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");
+                    Log.Info("DMMSAlerts", $"GetWindData: Found valid METAR data for {lat1},{lon1},{lat2},{lon2}");
                     return response;
                 }
             }
@@ -936,7 +958,14 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         }
         catch (HttpRequestException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"GetWindData HTTP Error: {ex.Message}, Status: {ex.StatusCode}, Inner: {ex.InnerException?.Message}");
+            Log.Error("DMMSAlerts", $"GetWindData HTTP Error: {ex.Message}, Status: {ex.StatusCode}, Inner: {ex.InnerException?.Message}");
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
             System.Diagnostics.Debug.WriteLine($"GetWindData Error: {ex.Message}");
+            Log.Error("DMMSAlerts", $"GetWindData Error: {ex.Message}");
             return string.Empty;
         }
     }
@@ -945,25 +974,40 @@ public partial class MainPage : ContentPage, INotifyPropertyChanged
         if (string.IsNullOrEmpty(airportCode))
         {
             System.Diagnostics.Debug.WriteLine("GetWindData: Invalid ID");
+            Log.Info("DMMSAlerts", "GetWindDataByID: Invalid ID");
             return string.Empty;
         }
-        using var client = new HttpClient();
+
+
+        using var client = CreateHttpClient(); // Use the custom HttpClient with TLS settings
         try
         {
             // Use ICAO code for precise airport METAR data
-            var response = await client.GetStringAsync($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
+            var url = $"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json";
+            System.Diagnostics.Debug.WriteLine($"GetWindDataByID: Sending request to {url}");
+            Log.Info("DMMSAlerts", $"GetWindDataByID: Sending request to {url}");
+            var response = await client.GetStringAsync(url);
+            System.Diagnostics.Debug.WriteLine($"GetWindDataByID: Response length for {url}: {response?.Length ?? 0}");
+            Log.Info("DMMSAlerts", $"GetWindDataByID: Response length for {url}: {response?.Length ?? 0}");
             var metars = JsonSerializer.Deserialize<List<MetarData>>(response);
             if (metars != null && metars.Any(m => !string.IsNullOrEmpty(m.Wdir) && int.TryParse(m.Wdir, out var wdir) && wdir >= 0 && wdir <= 360 && m.Wspd.HasValue))
             {
-                System.Diagnostics.Debug.WriteLine($"https://aviationweather.gov/api/data/metar?ids={airportCode}&format=json");
                 System.Diagnostics.Debug.WriteLine($"Wind Data for {airportCode}: {response}");
                 System.Diagnostics.Debug.WriteLine($"GetWindData: Found valid METAR data for {airportCode}");
+                Log.Info("DMMSAlerts", $"GetWindDataByID: Found valid METAR data for {airportCode}");
                 return response;
             }
         }
         catch (HttpRequestException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"GetWindData Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"GetWindDataByID HTTP Error: {ex.Message}, Status: {ex.StatusCode}, Inner: {ex.InnerException?.Message}");
+            Log.Error("DMMSAlerts", $"GetWindDataByID HTTP Error: {ex.Message}, Status: {ex.StatusCode}, Inner: {ex.InnerException?.Message}");
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetWindDataByID Error: {ex.Message}");
+            Log.Error("DMMSAlerts", $"GetWindDataByID Error: {ex.Message}");
             return string.Empty;
         }
         return string.Empty; // Ensure we return an empty string if no valid data found

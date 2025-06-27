@@ -3,3 +3,5 @@
 -keep class System.Net.Http.** { *; }
 -keep class System.Text.Json.** { *; }
 -keep class System.Net.HttpListener* { *; }
+-keep class System.Security.Authentication.** { *; }
+-keep class Microsoft.Maui.ApplicationModel.** { *; }
