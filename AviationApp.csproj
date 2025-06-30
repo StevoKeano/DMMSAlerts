@@ -4,7 +4,7 @@
 		<RunAOTCompilation>false</RunAOTCompilation>
 		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 		<AndroidMinimumApiLevel>21</AndroidMinimumApiLevel>
-		<AndroidSupportedApiLevel>34</AndroidSupportedApiLevel>		
+		<AndroidSupportedApiLevel>33</AndroidSupportedApiLevel>		
 		<OutputType>Exe</OutputType>
 		<RootNamespace>AviationApp</RootNamespace>
 		<UseMaui>true</UseMaui>
@@ -19,13 +19,10 @@
 		<ApplicationId>com.steve.DMMSAlerts</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.4.6</ApplicationDisplayVersion>
-		<ApplicationVersion>6</ApplicationVersion>
-		<AndroidVersionCode>6</AndroidVersionCode>
 
 		<!-- Android-specific settings -->
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">34.0</SupportedOSPlatformVersion>
-		<AndroidSdkVersion>35</AndroidSdkVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">33.0</SupportedOSPlatformVersion>
+		<AndroidSdkVersion>34</AndroidSdkVersion>
 		<AndroidPackageFormat>apk</AndroidPackageFormat>
 
 		<!-- Release mode settings -->
@@ -60,8 +57,10 @@
 	  <AndroidUseAapt2>True</AndroidUseAapt2>
 	  <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
 	  <AndroidPackageFormat>aab</AndroidPackageFormat>
-	  <ApplicationDisplayVersion>1.4.8</ApplicationDisplayVersion>
-	  <ApplicationVersion>8</ApplicationVersion>
+	  <ApplicationDisplayVersion>1.4.9</ApplicationDisplayVersion>
+	  <ApplicationVersion>9</ApplicationVersion>
+		<AndroidVersionCode>9</AndroidVersionCode>
+
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<UseAot>false</UseAot>
@@ -107,8 +106,10 @@
 	  <AndroidUseAapt2>True</AndroidUseAapt2>
 	  <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
 	  <AndroidPackageFormat>aab</AndroidPackageFormat>
-	  <ApplicationDisplayVersion>1.4.8</ApplicationDisplayVersion>
-	  <ApplicationVersion>8</ApplicationVersion>
+	  <ApplicationDisplayVersion>1.4.9</ApplicationDisplayVersion>
+	  <ApplicationVersion>9</ApplicationVersion>
+		<AndroidVersionCode>9</AndroidVersionCode>
+
 	</PropertyGroup>	
 <ItemGroup>
    	<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
