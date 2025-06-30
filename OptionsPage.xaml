@@ -110,8 +110,12 @@
                    BackgroundColor="{StaticResource Primary}"
                    Opacity="0.5"
                    TextColor="{StaticResource White}"
-                   PlaceholderColor="{StaticResource Gray100}" />
-
+                   PlaceholderColor="{StaticResource Gray100}" />          
+            <Label Text="DMMS Alerts is open-source! Check it out: https://github.com/StevoKeano/DMMSAlerts">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenGitHubCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
             <!-- Save Button -->
             <Border Stroke="Transparent"
                     StrokeShape="RoundRectangle 10"

@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using static AviationApp.MainPage;
 
 namespace AviationApp;
@@ -178,4 +179,9 @@ public partial class OptionsPage : ContentPage, INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         });
     }
+
+    public ICommand OpenGitHubCommand => new Command(() =>
+    {
+        Launcher.OpenAsync(new Uri("https://github.com/StevoKeano/DMMSAlerts"));
+    });
 }
